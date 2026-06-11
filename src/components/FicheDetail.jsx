@@ -1,25 +1,68 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { STATUT_LABEL, MATERIEL_LABEL, eur, frDate, wazeUrl } from '../lib/helpers'
 
-// Fiche détail d'une intervention (affichée en bottom sheet).
-// Charge les pièces jointes / photos depuis Storage.
-export default function FicheDetail({ inter, onClose }) {
-  const [files, setFiles] = useState({ pj: [], ph: [] })
+const BUCKETS = [
+  { id: 'pieces-jointes', key: 'pj', label: 'Pièce', icon: '📄', accept: '.pdf,.doc,.docx,image/*' },
+  { id: 'photos', key: 'ph', label: 'Photo', icon: '🖼️', accept: 'image/*', isImage: true }
+]
 
-  useEffect(() => {
-    let active = true
-    async function loadFiles() {
-      const out = { pj: [], ph: [] }
-      for (const [bucket, key] of [['pieces-jointes', 'pj'], ['photos', 'ph']]) {
-        const { data, error } = await supabase.storage.from(bucket).list(inter.id, { limit: 50 })
-        if (!error && data) out[key] = data.filter(f => f.name !== '.emptyFolderPlaceholder')
+// Fiche détail d'une intervention (bottom sheet).
+// canUpload = true -> l'admin peut ajouter / supprimer des fichiers.
+export default function FicheDetail({ inter, onClose, canUpload = false }) {
+  const [files, setFiles] = useState({ pj: [], ph: [] })
+  const [thumbs, setThumbs] = useState({})
+  const [busy, setBusy] = useState(null)
+  const inputs = { 'pieces-jointes': useRef(null), photos: useRef(null) }
+
+  const loadFiles = useCallback(async () => {
+    const out = { pj: [], ph: [] }
+    const t = {}
+    for (const b of BUCKETS) {
+      const { data, error } = await supabase.storage.from(b.id).list(inter.id, { limit: 50 })
+      if (!error && data) {
+        const list = data.filter(f => f.name !== '.emptyFolderPlaceholder')
+        out[b.key] = list
+        if (b.isImage) {
+          for (const f of list) {
+            const { data: signed } = await supabase.storage.from(b.id).createSignedUrl(`${inter.id}/${f.name}`, 3600)
+            if (signed?.signedUrl) t[f.name] = signed.signedUrl
+          }
+        }
       }
-      if (active) setFiles(out)
     }
-    loadFiles()
-    return () => { active = false }
+    setFiles(out); setThumbs(t)
   }, [inter.id])
+
+  useEffect(() => { loadFiles() }, [loadFiles])
+
+  async function onPick(bucket, e) {
+    const fileList = Array.from(e.target.files || [])
+    if (!fileList.length) return
+    setBusy(bucket)
+    for (const file of fileList) {
+      const safe = file.name.replace(/[^\w.\-]/g, '_')
+      const path = `${inter.id}/${Date.now()}_${safe}`
+      const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: false })
+      if (error) console.error('Upload', error)
+    }
+    setBusy(null)
+    e.target.value = ''
+    await loadFiles()
+  }
+
+  async function openFile(bucket, name) {
+    const { data } = await supabase.storage.from(bucket).createSignedUrl(`${inter.id}/${name}`, 3600)
+    if (data?.signedUrl) window.open(data.signedUrl, '_blank')
+  }
+
+  async function removeFile(bucket, name) {
+    if (!confirm('Supprimer ce fichier ?')) return
+    await supabase.storage.from(bucket).remove([`${inter.id}/${name}`])
+    await loadFiles()
+  }
+
+  const hasFiles = files.pj.length > 0 || files.ph.length > 0
 
   return (
     <>
@@ -55,18 +98,44 @@ export default function FicheDetail({ inter, onClose }) {
             <div className="sectlabel" style={{ margin: '4px 0 8px' }}>PIÈCES &amp; PHOTOS</div>
             <div className="files">
               {files.pj.map(f => (
-                <div className="file" key={'pj' + f.name}><div className="ph">📄</div>{f.name.slice(0, 10)}</div>
+                <div className="file" key={'pj' + f.name} onClick={() => openFile('pieces-jointes', f.name)} style={{ cursor: 'pointer', position: 'relative' }}>
+                  {canUpload && <button className="filedel" onClick={e => { e.stopPropagation(); removeFile('pieces-jointes', f.name) }}>✕</button>}
+                  <div className="ph">📄</div>{displayName(f.name)}
+                </div>
               ))}
               {files.ph.map(f => (
-                <div className="file" key={'ph' + f.name}><div className="ph">🖼️</div>Photo</div>
+                <div className="file" key={'ph' + f.name} onClick={() => openFile('photos', f.name)} style={{ cursor: 'pointer', position: 'relative' }}>
+                  {canUpload && <button className="filedel" onClick={e => { e.stopPropagation(); removeFile('photos', f.name) }}>✕</button>}
+                  <div className="ph">{thumbs[f.name] ? <img src={thumbs[f.name]} alt="" /> : '🖼️'}</div>Photo
+                </div>
               ))}
-              {files.pj.length === 0 && files.ph.length === 0 && (
+              {!hasFiles && !canUpload && (
                 <div style={{ color: '#8693a5', fontSize: 13, padding: 6 }}>Aucune pièce pour l'instant.</div>
               )}
             </div>
+
+            {canUpload && (
+              <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                {BUCKETS.map(b => (
+                  <div key={b.id} style={{ flex: 1 }}>
+                    <input ref={inputs[b.id]} type="file" accept={b.accept} multiple
+                      style={{ display: 'none' }} onChange={e => onPick(b.id, e)} />
+                    <button className="btn ghost" style={{ width: '100%', fontSize: 13 }}
+                      disabled={busy === b.id} onClick={() => inputs[b.id].current?.click()}>
+                      {busy === b.id ? 'Envoi…' : `${b.icon} Ajouter ${b.label.toLowerCase()}`}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
     </>
   )
+}
+
+function displayName(name) {
+  const n = name.replace(/^\d+_/, '')
+  return n.length > 12 ? n.slice(0, 11) + '…' : n
 }

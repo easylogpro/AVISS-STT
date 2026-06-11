@@ -3,6 +3,7 @@ import { useInterventions } from '../hooks/useInterventions'
 import FicheDetail from '../components/FicheDetail'
 import NouveauChantier from '../components/NouveauChantier'
 import Budget from '../components/Budget'
+import GestionST from './GestionST'
 import {
   STATUT_LABEL, MATERIEL_LABEL, eur, frDate,
   isHistorique, triActives
@@ -50,7 +51,9 @@ export default function AppAdmin({ profile, signOut }) {
   return (
     <div className="phone">
       <div className="hdr">
-        <div className="brand"><div className="flame">🔥</div><b>AVISS STT</b><span className="role-pill">ADMIN</span></div>
+        <div className="brand"><div className="flame">🔥</div><b>AVISS STT</b>
+          <button className="role-pill" style={{ border: 0, cursor: 'pointer', font: 'inherit' }} onClick={() => setTab('profil')}>ADMIN ⚙</button>
+        </div>
         <div className="hello">Bonjour, {nom} 👋</div>
         <div className="date">{todayLabel}</div>
         <div className="stats">
@@ -93,6 +96,7 @@ export default function AppAdmin({ profile, signOut }) {
 
       {tab === 'nouveau' && <NouveauChantier onCreate={creer} />}
       {tab === 'budget' && <Budget items={items} />}
+      {tab === 'sous_traitants' && <GestionST />}
 
       {tab === 'historique' && (
         <div className="body">
@@ -117,12 +121,15 @@ export default function AppAdmin({ profile, signOut }) {
 
       {tab === 'profil' && (
         <div className="body">
-          <div className="page-h">Profil</div>
+          <div className="page-h">Profil &amp; réglages</div>
           <div className="ch">
             <div className="ttl">{nom}</div>
             <p style={{ color: 'var(--ink2)', marginTop: 6, fontSize: 13 }}>Administrateur AVISS</p>
-            <button className="btn ghost full" onClick={signOut}>Se déconnecter</button>
           </div>
+          <button className="btn ghost full" style={{ marginTop: 4 }} onClick={() => setTab('sous_traitants')}>
+            👷 Gérer les sous-traitants
+          </button>
+          <button className="btn ghost full" onClick={signOut}>Se déconnecter</button>
         </div>
       )}
 
@@ -146,7 +153,7 @@ export default function AppAdmin({ profile, signOut }) {
         </button>
       </nav>
 
-      {detail && <FicheDetail inter={detail} onClose={() => setDetail(null)} />}
+      {detail && <FicheDetail inter={detail} onClose={() => setDetail(null)} canUpload />}
     </div>
   )
 }
