@@ -70,5 +70,16 @@ export function useInterventions() {
     return { error }
   }, [fetchItems])
 
-  return { items, loading, error, refetch: fetchItems, updateDate, valider, marquerVue, creer }
+  // ADMIN — Modifier des champs d'une intervention (email/tel/date/adresse…).
+  // Si la date change, on renvoie l'info pour gérer le statut côté appelant.
+  const updateChamps = useCallback(async (id, champs) => {
+    const { error } = await supabase
+      .from('interventions')
+      .update(champs)
+      .eq('id', id)
+    if (!error) await fetchItems()
+    return { error }
+  }, [fetchItems])
+
+  return { items, loading, error, refetch: fetchItems, updateDate, valider, marquerVue, creer, updateChamps }
 }

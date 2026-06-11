@@ -8,12 +8,22 @@ const BUCKETS = [
 ]
 
 // Fiche détail d'une intervention (bottom sheet).
-// canUpload = true -> l'admin peut ajouter / supprimer des fichiers.
-export default function FicheDetail({ inter, onClose, canUpload = false }) {
+// canUpload = true (admin) -> peut éditer email/tel/date + gérer les fichiers.
+// onSave(id, champs) : callback pour enregistrer les modifs (fourni par l'admin).
+export default function FicheDetail({ inter, onClose, canUpload = false, onSave }) {
   const [files, setFiles] = useState({ pj: [], ph: [] })
   const [thumbs, setThumbs] = useState({})
   const [busy, setBusy] = useState(null)
   const inputs = { 'pieces-jointes': useRef(null), photos: useRef(null) }
+
+  // champs éditables (admin)
+  const [edit, setEdit] = useState({
+    email_client: inter.email_client || '',
+    tel_client: inter.tel_client || '',
+    date_inter: inter.date_inter || ''
+  })
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
 
   const loadFiles = useCallback(async () => {
     const out = { pj: [], ph: [] }
@@ -62,7 +72,25 @@ export default function FicheDetail({ inter, onClose, canUpload = false }) {
     await loadFiles()
   }
 
+  async function save() {
+    if (!onSave) return
+    setSaving(true); setSaved(false)
+    const champs = {
+      email_client: edit.email_client.trim() || null,
+      tel_client: edit.tel_client.trim() || null,
+      date_inter: edit.date_inter || null
+    }
+    const { error } = await onSave(inter.id, champs)
+    setSaving(false)
+    if (!error) { setSaved(true); setTimeout(() => setSaved(false), 2500) }
+  }
+
   const hasFiles = files.pj.length > 0 || files.ph.length > 0
+  const dirty = canUpload && (
+    edit.email_client !== (inter.email_client || '') ||
+    edit.tel_client !== (inter.tel_client || '') ||
+    edit.date_inter !== (inter.date_inter || '')
+  )
 
   return (
     <>
@@ -79,7 +107,7 @@ export default function FicheDetail({ inter, onClose, canUpload = false }) {
             <span className="ic">📍</span>
             <span>Naviguer avec Waze<div className="addr">{[inter.adresse, inter.ville, inter.dep].filter(Boolean).join(', ')}</div></span>
           </a>
-          {inter.tel_client && (
+          {!canUpload && inter.tel_client && (
             <a className="tel" href={`tel:${inter.tel_client.replace(/\s/g, '')}`}>📞 Appeler le site · {inter.tel_client}</a>
           )}
 
@@ -88,14 +116,41 @@ export default function FicheDetail({ inter, onClose, canUpload = false }) {
             {inter.nature_travaux && <div className="nat" style={{ marginTop: 0 }}>{inter.nature_travaux}</div>}
             <div className="dl">
               <div className="field eur"><div className="k">Budget</div><div className="v">{eur(inter.budget)}</div></div>
-              <div className="field"><div className="k">Date inter</div><div className="v" style={{ fontSize: 14 }}>{frDate(inter.date_inter)}</div></div>
               <div className="field"><div className="k">Matériel</div><div className="v" style={{ fontSize: 13 }}>{MATERIEL_LABEL[inter.materiel_statut] || '—'}</div></div>
               <div className="field"><div className="k">À prévoir</div><div className="v" style={{ fontSize: 13 }}>{inter.materiel || '—'}</div></div>
-              <div className="field"><div className="k">N° site</div><div className="v">{inter.num_site}</div></div>
               <div className="field"><div className="k">Statut</div><div className="v" style={{ fontSize: 13 }}>{STATUT_LABEL[inter.statut]}</div></div>
             </div>
 
-            <div className="sectlabel" style={{ margin: '4px 0 8px' }}>PIÈCES &amp; PHOTOS</div>
+            {/* ZONE ÉDITABLE ADMIN */}
+            {canUpload ? (
+              <div className="form" style={{ marginTop: 4 }}>
+                <label>Date d'intervention</label>
+                <input type="date" value={edit.date_inter}
+                  onChange={e => setEdit(s => ({ ...s, date_inter: e.target.value }))} />
+                <label>Email client</label>
+                <input type="email" value={edit.email_client} placeholder="contact@client.fr" autoCapitalize="none"
+                  onChange={e => setEdit(s => ({ ...s, email_client: e.target.value }))} />
+                <label>Téléphone client</label>
+                <input value={edit.tel_client} placeholder="01 46 00 00 00"
+                  onChange={e => setEdit(s => ({ ...s, tel_client: e.target.value }))} />
+                <button className="btn primary full" style={{ marginTop: 12 }}
+                  onClick={save} disabled={!dirty || saving}>
+                  {saving ? 'Enregistrement…' : saved ? '✓ Enregistré' : 'Enregistrer les modifications'}
+                </button>
+                {(edit.date_inter !== (inter.date_inter || '')) && (
+                  <p style={{ fontSize: 12, color: 'var(--wait)', marginTop: 8 }}>
+                    ⚠ Modifier la date repassera l'intervention en « à valider ».
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="dl" style={{ marginTop: 0 }}>
+                <div className="field"><div className="k">Date inter</div><div className="v" style={{ fontSize: 14 }}>{frDate(inter.date_inter)}</div></div>
+                <div className="field"><div className="k">N° site</div><div className="v">{inter.num_site}</div></div>
+              </div>
+            )}
+
+            <div className="sectlabel" style={{ margin: '14px 0 8px' }}>PIÈCES &amp; PHOTOS</div>
             <div className="files">
               {files.pj.map(f => (
                 <div className="file" key={'pj' + f.name} onClick={() => openFile('pieces-jointes', f.name)} style={{ cursor: 'pointer', position: 'relative' }}>

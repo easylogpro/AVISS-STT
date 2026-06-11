@@ -12,9 +12,10 @@ import {
 const todayLabel = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
 
 export default function AppAdmin({ profile, signOut }) {
-  const { items, loading, error, valider, creer } = useInterventions()
+  const { items, loading, error, valider, creer, updateChamps } = useInterventions()
   const [tab, setTab] = useState('chantiers')  // chantiers | nouveau | budget | historique | profil
   const [view, setView] = useState('cards')
+  const [filtre, setFiltre] = useState(null)  // null | 'a_planifier' | 'en_attente' | 'nouvelles'
   const [detail, setDetail] = useState(null)
   const [validId, setValidId] = useState(null)
 
@@ -32,6 +33,13 @@ export default function AppAdmin({ profile, signOut }) {
     }
     return { active, historique, stats, nbNew }
   }, [items])
+
+  // Liste affichée selon le filtre KPI actif
+  const affichee = useMemo(() => {
+    if (!filtre) return active
+    if (filtre === 'nouvelles') return active.filter(i => i.vue_admin === false)
+    return active.filter(i => i.statut === filtre)
+  }, [active, filtre])
 
   async function onValider(id) {
     setValidId(id)
@@ -57,21 +65,35 @@ export default function AppAdmin({ profile, signOut }) {
         <div className="hello">Bonjour, {nom} 👋</div>
         <div className="date">{todayLabel}</div>
         <div className="stats">
-          <div className={'stat' + (stats.nouvelles ? ' alert' : '')}>
+          <div className={'stat' + (stats.nouvelles ? ' alert' : '') + (filtre === 'nouvelles' ? ' on' : '')}
+            style={{ cursor: 'pointer' }}
+            onClick={() => { setTab('chantiers'); setFiltre(filtre === 'nouvelles' ? null : 'nouvelles') }}>
             <div className="top">Nouvelles dates</div><div className="big rd">{stats.nouvelles}</div>
           </div>
-          <div className="stat"><div className="top">À planifier</div><div className="big">{stats.aPlanifier}</div></div>
-          <div className="stat"><div className="top">Budget</div><div className="big bl">{eur(stats.budget)}</div></div>
+          <div className={'stat' + (filtre === 'a_planifier' ? ' on' : '')}
+            style={{ cursor: 'pointer' }}
+            onClick={() => { setTab('chantiers'); setFiltre(filtre === 'a_planifier' ? null : 'a_planifier') }}>
+            <div className="top">À planifier</div><div className="big">{stats.aPlanifier}</div>
+          </div>
+          <div className="stat" style={{ cursor: 'pointer' }} onClick={() => setTab('budget')}>
+            <div className="top">Budget</div><div className="big bl">{eur(stats.budget)}</div>
+          </div>
         </div>
       </div>
 
       {tab === 'chantiers' && (
         <div className="body">
-          {nbNew > 0 && (
+          {filtre && (
+            <div className="banner" style={{ background: 'var(--bluebg)', borderColor: '#cfe0f1', color: 'var(--blue)' }}>
+              <span>Filtre : {filtre === 'nouvelles' ? 'nouvelles dates' : filtre === 'a_planifier' ? 'à planifier' : 'à valider'}</span>
+              <button className="btn ghost" style={{ marginLeft: 'auto', padding: '4px 10px', fontSize: 12 }} onClick={() => setFiltre(null)}>Tout voir</button>
+            </div>
+          )}
+          {!filtre && nbNew > 0 && (
             <div className="banner"><span className="dot" />{nbNew} nouvelle{nbNew > 1 ? 's' : ''} date{nbNew > 1 ? 's' : ''} posée{nbNew > 1 ? 's' : ''} — à valider</div>
           )}
           <div className="toolbar">
-            <span className="lbl">Triés par état</span>
+            <span className="lbl">{filtre ? 'Résultats filtrés' : 'Triés par état'}</span>
             <div className="seg">
               <button className={view === 'cards' ? 'on' : ''} onClick={() => setView('cards')}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="7" rx="1"/><rect x="3" y="14" width="18" height="7" rx="1"/></svg>Cartes
@@ -84,12 +106,12 @@ export default function AppAdmin({ profile, signOut }) {
 
           {loading && <div className="empty">Chargement…</div>}
           {error && <div className="empty">Erreur de chargement.</div>}
-          {!loading && !error && active.length === 0 && <div className="empty">Aucun chantier actif.</div>}
+          {!loading && !error && affichee.length === 0 && <div className="empty">Aucun chantier{filtre ? ' pour ce filtre' : ' actif'}.</div>}
 
-          {!loading && !error && active.length > 0 && (
+          {!loading && !error && affichee.length > 0 && (
             view === 'cards'
-              ? <CardsAdmin list={active} validId={validId} onOpen={setDetail} onValider={onValider} />
-              : <TableAdmin list={active} validId={validId} onValider={onValider} />
+              ? <CardsAdmin list={affichee} validId={validId} onOpen={setDetail} onValider={onValider} grouped={!filtre} />
+              : <TableAdmin list={affichee} validId={validId} onOpen={setDetail} onValider={onValider} />
           )}
         </div>
       )}
@@ -134,16 +156,15 @@ export default function AppAdmin({ profile, signOut }) {
       )}
 
       <nav className="nav">
+        <button onClick={() => setTab('nouveau')} style={navStyle(tab === 'nouveau')}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Nouveau
+        </button>
         <button onClick={() => setTab('chantiers')} style={navStyle(tab === 'chantiers')}>
           <span style={{ position: 'relative' }}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 11l9-8 9 8M5 10v10h14V10"/></svg>
             {nbNew > 0 && <span className="pastille" style={{ position: 'absolute', top: -6, right: -10 }}>{nbNew}</span>}
           </span>
           Chantiers
-        </button>
-        <button onClick={() => setTab('nouveau')} style={{ ...navStyle(false), marginTop: -22 }}>
-          <span className="plus"><span className="fab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg></span></span>
-          <span style={{ fontSize: 11, color: tab === 'nouveau' ? 'var(--red)' : '#9aa6b5' }}>Nouveau</span>
         </button>
         <button onClick={() => setTab('budget')} style={navStyle(tab === 'budget')}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 3v18h18"/><path d="M7 14l3-4 3 3 4-6"/></svg>Budget
@@ -153,7 +174,7 @@ export default function AppAdmin({ profile, signOut }) {
         </button>
       </nav>
 
-      {detail && <FicheDetail inter={detail} onClose={() => setDetail(null)} canUpload />}
+      {detail && <FicheDetail inter={detail} onClose={() => setDetail(null)} canUpload onSave={updateChamps} />}
     </div>
   )
 }
@@ -167,7 +188,13 @@ function navStyle(on) {
 }
 
 // ---- cartes admin ----
-function CardsAdmin({ list, validId, onOpen, onValider }) {
+function CardsAdmin({ list, validId, onOpen, onValider, grouped = true }) {
+  // Mode filtré : liste simple sans regroupement par sections
+  if (!grouped) {
+    return list.map(i => (
+      <RowCard key={i.id} i={i} isNew={i.vue_admin === false} validId={validId} onOpen={onOpen} onValider={onValider} />
+    ))
+  }
   const news = list.filter(i => i.vue_admin === false)
   const rest = list.filter(i => i.vue_admin !== false)
   const groups = [['a_planifier', 'SANS DATE'], ['en_attente', 'À VALIDER'], ['envoye', 'VALIDÉES (à venir)']]
@@ -222,21 +249,22 @@ function RowCard({ i, isNew, validId, onOpen, onValider }) {
 }
 
 // ---- tableau admin ----
-function TableAdmin({ list, validId, onValider }) {
+function TableAdmin({ list, validId, onOpen, onValider }) {
   return (
     <div className="tbl">
       <table>
         <thead><tr><th>Site</th><th>Date</th><th>Budget</th><th>Action</th></tr></thead>
         <tbody>
           {list.map(i => (
-            <tr key={i.id} className={(i.vue_admin === false ? 'isnew ' : '') + (i.statut === 'a_planifier' ? 'nodate' : '')}>
+            <tr key={i.id} className={(i.vue_admin === false ? 'isnew ' : '') + (i.statut === 'a_planifier' ? 'nodate' : '')}
+              onClick={() => onOpen(i)} style={{ cursor: 'pointer' }}>
               <td>
                 <div className="site">{i.nom_site}{i.vue_admin === false && <span className="newtag" style={{ marginLeft: 5 }}>NEW</span>}</div>
                 <div className="sub">{i.ville} · {i.num_trx}</div>
               </td>
               <td>{frDate(i.date_inter)}</td>
               <td style={{ color: 'var(--blue)', fontWeight: 800 }}>{eur(i.budget)}</td>
-              <td>
+              <td onClick={e => e.stopPropagation()}>
                 {i.statut === 'en_attente'
                   ? <button className="vbtn" disabled={validId === i.id} onClick={() => onValider(i.id)}>{validId === i.id ? '…' : 'Valider'}</button>
                   : <span className={'b ' + i.statut}>{STATUT_LABEL[i.statut]}</span>}

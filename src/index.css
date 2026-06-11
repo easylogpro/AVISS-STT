@@ -8,7 +8,7 @@
 html,body,#root{height:100%}
 body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:#cfd6df;color:var(--ink)}
 #root{display:flex;justify-content:center}
-.phone{width:100%;max-width:430px;min-height:100vh;background:var(--bg);position:relative;overflow-x:hidden;padding-bottom:calc(env(safe-area-inset-bottom) + 110px)}
+.phone{width:100%;max-width:430px;min-height:100vh;background:var(--bg);position:relative;overflow-x:hidden;padding-bottom:calc(env(safe-area-inset-bottom) + 84px)}
 
 /* HEADER */
 .hdr{background:var(--night);color:#fff;padding:calc(env(safe-area-inset-top) + 40px) 20px 24px;border-radius:0 0 26px 26px;position:relative;overflow:hidden}
@@ -22,6 +22,7 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:#cfd6d
 .stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:18px;position:relative;z-index:2}
 .stat{background:var(--night2);border:1px solid #ffffff14;border-radius:15px;padding:13px 12px}
 .stat.alert{background:#3a2326;border-color:#e23b2e55}
+.stat.on{outline:2px solid var(--or1);outline-offset:1px}
 .stat .top{color:#9fb0c4;font-size:12px;font-weight:600}
 .stat.alert .top{color:#ff9d94}
 .stat .big{font-size:25px;font-weight:800;margin-top:4px}
