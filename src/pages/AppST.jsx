@@ -2,8 +2,8 @@ import { useState, useMemo } from 'react'
 import { useInterventions } from '../hooks/useInterventions'
 import FicheDetail from '../components/FicheDetail'
 import {
-  STATUT_LABEL, MATERIEL_LABEL, eur, frDate, wazeUrl,
-  isHistorique, triActives
+  STATUT_LABEL, STATUT_LABEL_COURT, MATERIEL_LABEL, eur, frDate, wazeUrl,
+  isHistorique, triParDate, triColonne
 } from '../lib/helpers'
 
 const todayLabel = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
@@ -14,9 +14,12 @@ export default function AppST({ profile, signOut }) {
   const [view, setView] = useState('cards')     // cards | table
   const [detail, setDetail] = useState(null)
   const [savingId, setSavingId] = useState(null)
+  const [filtre, setFiltre] = useState(null)    // null | a_planifier | en_attente | envoye
+  const [tri, setTri] = useState({ cle: null, asc: true })  // tri colonne tableau
 
   const { active, historique, stats } = useMemo(() => {
-    const active = triActives(items.filter(i => !isHistorique(i)))
+    // par défaut : sans date d'abord puis chronologique
+    const active = triParDate(items.filter(i => !isHistorique(i)), true)
     const historique = items.filter(i => isHistorique(i))
       .sort((a, b) => new Date(b.date_inter) - new Date(a.date_inter))
     const stats = {
@@ -26,6 +29,17 @@ export default function AppST({ profile, signOut }) {
     }
     return { active, historique, stats }
   }, [items])
+
+  // liste affichée : filtre KPI + tri colonne éventuel
+  const affichee = useMemo(() => {
+    let l = filtre ? active.filter(i => i.statut === filtre) : active
+    if (tri.cle) l = triColonne(l, tri.cle, tri.asc)
+    return l
+  }, [active, filtre, tri])
+
+  function trierPar(cle) {
+    setTri(t => t.cle === cle ? { cle, asc: !t.asc } : { cle, asc: true })
+  }
 
   async function onDateChange(id, value) {
     setSavingId(id)
@@ -42,16 +56,31 @@ export default function AppST({ profile, signOut }) {
         <div className="hello">Bonjour, {nom} 👋</div>
         <div className="date">{todayLabel}</div>
         <div className="stats">
-          <div className="stat"><div className="top">Sans date</div><div className="big">{stats.sansDate}</div></div>
-          <div className="stat"><div className="top">À valider</div><div className="big or">{stats.aValider}</div></div>
-          <div className="stat"><div className="top">Validées</div><div className="big gr">{stats.validees}</div></div>
+          <div className={'stat' + (filtre === 'a_planifier' ? ' on' : '')} style={{ cursor: 'pointer' }}
+            onClick={() => setFiltre(filtre === 'a_planifier' ? null : 'a_planifier')}>
+            <div className="top">À planifier</div><div className="big">{stats.sansDate}</div>
+          </div>
+          <div className={'stat' + (filtre === 'en_attente' ? ' on' : '')} style={{ cursor: 'pointer' }}
+            onClick={() => setFiltre(filtre === 'en_attente' ? null : 'en_attente')}>
+            <div className="top">Att. confirmation</div><div className="big or">{stats.aValider}</div>
+          </div>
+          <div className={'stat' + (filtre === 'envoye' ? ' on' : '')} style={{ cursor: 'pointer' }}
+            onClick={() => setFiltre(filtre === 'envoye' ? null : 'envoye')}>
+            <div className="top">Confirmé</div><div className="big gr">{stats.validees}</div>
+          </div>
         </div>
       </div>
 
       {tab === 'chantiers' && (
         <div className="body">
+          {filtre && (
+            <div className="banner" style={{ background: 'var(--bluebg)', borderColor: '#cfe0f1', color: 'var(--blue)' }}>
+              <span>Filtre : {STATUT_LABEL_COURT[filtre]}</span>
+              <button className="btn ghost" style={{ marginLeft: 'auto', padding: '4px 10px', fontSize: 12 }} onClick={() => setFiltre(null)}>Tout voir</button>
+            </div>
+          )}
           <div className="toolbar">
-            <span className="lbl">Triés par état</span>
+            <span className="lbl">{filtre ? 'Résultats filtrés' : 'Par date'}</span>
             <div className="seg">
               <button className={view === 'cards' ? 'on' : ''} onClick={() => setView('cards')}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="7" rx="1"/><rect x="3" y="14" width="18" height="7" rx="1"/></svg>Cartes
@@ -64,12 +93,12 @@ export default function AppST({ profile, signOut }) {
 
           {loading && <div className="empty">Chargement…</div>}
           {error && <div className="empty">Erreur de chargement. Réessaie.</div>}
-          {!loading && !error && active.length === 0 && <div className="empty">Aucun chantier en cours.</div>}
+          {!loading && !error && affichee.length === 0 && <div className="empty">Aucun chantier{filtre ? ' pour ce filtre' : ' en cours'}.</div>}
 
-          {!loading && !error && active.length > 0 && (
+          {!loading && !error && affichee.length > 0 && (
             view === 'cards'
-              ? <CardsST list={active} savingId={savingId} onOpen={setDetail} onDateChange={onDateChange} />
-              : <TableST list={active} savingId={savingId} onDateChange={onDateChange} />
+              ? <CardsST list={affichee} grouped={!filtre} savingId={savingId} onOpen={setDetail} onDateChange={onDateChange} />
+              : <TableST list={affichee} savingId={savingId} onDateChange={onDateChange} tri={tri} trierPar={trierPar} onOpen={setDetail} />
           )}
         </div>
       )}
@@ -133,11 +162,40 @@ function navStyle(on) {
 }
 
 // ---- Vue cartes ----
-function CardsST({ list, savingId, onOpen, onDateChange }) {
+function CardsST({ list, savingId, onOpen, onDateChange, grouped = true }) {
+  const renderCard = (i) => (
+    <div className={'ch clickable' + (i.statut === 'a_planifier' ? ' nodate' : '')} key={i.id} onClick={() => onOpen(i)}>
+      <div className="row1">
+        <div><div className="ttl">{i.nom_site}</div><div className="city">{i.ville} · {i.dep}</div></div>
+        <span className={'b ' + i.statut + ' ml'}>{STATUT_LABEL_COURT[i.statut]}</span>
+      </div>
+      {i.nature_travaux && <div className="nat">{i.nature_travaux}</div>}
+      <div className="grid2">
+        <div className="field eur"><div className="k">Mon budget</div><div className="v">{eur(i.budget)}</div></div>
+        <div className="field"><div className="k">Réf. TRX</div><div className="v">{i.num_trx}</div></div>
+      </div>
+      <div style={{ marginTop: 9 }}>
+        <span className={'mtag' + (i.materiel_statut === 'a_envoyer' ? ' warn' : '')}>{MATERIEL_LABEL[i.materiel_statut]}</span>
+        {i.materiel && <span className="mtag">{i.materiel}</span>}
+      </div>
+      <a className="waze" href={wazeUrl(i)} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}>
+        <span className="ic">📍</span><span>Ouvrir dans Waze<div className="addr">{[i.adresse, i.ville].filter(Boolean).join(', ')}</div></span>
+      </a>
+      <div className="dateblock" onClick={e => e.stopPropagation()}>
+        <div className="lab">Date d'intervention {savingId === i.id && '· enregistrement…'}</div>
+        <input className="dateinput" type="date" defaultValue={i.date_inter || ''}
+          onChange={e => onDateChange(i.id, e.target.value)} disabled={savingId === i.id} />
+      </div>
+    </div>
+  )
+
+  // mode filtré : liste simple
+  if (!grouped) return list.map(renderCard)
+
   const groups = [
-    ['a_planifier', 'SANS DATE — À PLANIFIER', true],
-    ['en_attente', 'À VALIDER', false],
-    ['envoye', 'VALIDÉES (à venir)', false],
+    ['a_planifier', 'À PLANIFIER', true],
+    ['en_attente', 'EN ATTENTE CONFIRMATION CLIENT', false],
+    ['envoye', 'CONFIRMÉ PAR CLIENT', false],
   ]
   return groups.map(([st, label, urgent]) => {
     const arr = list.filter(i => i.statut === st)
@@ -145,50 +203,44 @@ function CardsST({ list, savingId, onOpen, onDateChange }) {
     return (
       <div key={st}>
         <div className={'sectlabel' + (urgent ? ' new' : '')}>{label}<span className="cnt">{arr.length}</span></div>
-        {arr.map(i => (
-          <div className={'ch clickable' + (i.statut === 'a_planifier' ? ' nodate' : '')} key={i.id} onClick={() => onOpen(i)}>
-            <div className="row1">
-              <div><div className="ttl">{i.nom_site}</div><div className="city">{i.ville} · {i.dep}</div></div>
-              <span className={'b ' + i.statut + ' ml'}>{STATUT_LABEL[i.statut]}</span>
-            </div>
-            {i.nature_travaux && <div className="nat">{i.nature_travaux}</div>}
-            <div className="grid2">
-              <div className="field eur"><div className="k">Mon budget</div><div className="v">{eur(i.budget)}</div></div>
-              <div className="field"><div className="k">Réf. TRX</div><div className="v">{i.num_trx}</div></div>
-            </div>
-            <div style={{ marginTop: 9 }}>
-              <span className={'mtag' + (i.materiel_statut === 'a_envoyer' ? ' warn' : '')}>{MATERIEL_LABEL[i.materiel_statut]}</span>
-              {i.materiel && <span className="mtag">{i.materiel}</span>}
-            </div>
-            <a className="waze" href={wazeUrl(i)} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}>
-              <span className="ic">📍</span><span>Ouvrir dans Waze<div className="addr">{[i.adresse, i.ville].filter(Boolean).join(', ')}</div></span>
-            </a>
-            <div className="dateblock" onClick={e => e.stopPropagation()}>
-              <div className="lab">Date d'intervention {savingId === i.id && '· enregistrement…'}</div>
-              <input className="dateinput" type="date" defaultValue={i.date_inter || ''}
-                onChange={e => onDateChange(i.id, e.target.value)} disabled={savingId === i.id} />
-            </div>
-          </div>
-        ))}
+        {arr.map(renderCard)}
       </div>
     )
   })
 }
 
+// flèche de tri
+function SortArrow({ active, asc }) {
+  if (!active) return <span style={{ opacity: .3, marginLeft: 3 }}>↕</span>
+  return <span style={{ marginLeft: 3 }}>{asc ? '↑' : '↓'}</span>
+}
+
 // ---- Vue tableau ----
-function TableST({ list, savingId, onDateChange }) {
+function TableST({ list, savingId, onDateChange, tri, trierPar, onOpen }) {
+  const Th = ({ cle, children }) => (
+    <th style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => trierPar(cle)}>
+      {children}<SortArrow active={tri.cle === cle} asc={tri.asc} />
+    </th>
+  )
   return (
     <div className="tbl">
       <table>
-        <thead><tr><th>Site</th><th>Budget</th><th>Date inter</th><th>Statut</th></tr></thead>
+        <thead><tr>
+          <Th cle="nom_site">Site</Th>
+          <Th cle="budget">Budget</Th>
+          <Th cle="date_inter">Date</Th>
+          <Th cle="statut">Statut</Th>
+        </tr></thead>
         <tbody>
           {list.map(i => (
             <tr key={i.id} className={i.statut === 'a_planifier' ? 'nodate' : ''}>
-              <td><div className="site">{i.nom_site}</div><div className="sub">{i.ville} · {i.num_trx}</div></td>
+              <td onClick={() => onOpen(i)} style={{ cursor: 'pointer' }}>
+                <div className="site">{i.nom_site}</div><div className="sub">{i.ville} · {i.num_trx}</div>
+              </td>
               <td style={{ color: 'var(--blue)', fontWeight: 800 }}>{eur(i.budget)}</td>
-              <td><input className="di" type="date" defaultValue={i.date_inter || ''}
+              <td onClick={e => e.stopPropagation()}><input className="di" type="date" defaultValue={i.date_inter || ''}
                 onChange={e => onDateChange(i.id, e.target.value)} disabled={savingId === i.id} /></td>
-              <td><span className={'b ' + i.statut}>{STATUT_LABEL[i.statut]}</span></td>
+              <td><span className={'b ' + i.statut}>{STATUT_LABEL_COURT[i.statut]}</span></td>
             </tr>
           ))}
         </tbody>

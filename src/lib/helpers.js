@@ -2,8 +2,15 @@
 
 export const STATUT_LABEL = {
   a_planifier: 'À planifier',
-  en_attente: 'À valider',
-  envoye: 'Envoyé'
+  en_attente: 'En attente confirmation client',
+  envoye: 'Confirmé par client'
+}
+
+// Version courte pour les badges/tableaux où la place manque
+export const STATUT_LABEL_COURT = {
+  a_planifier: 'À planifier',
+  en_attente: 'Att. confirmation',
+  envoye: 'Confirmé'
 }
 
 export const MATERIEL_LABEL = {
@@ -40,3 +47,33 @@ export const triActives = (list) =>
   [...list].sort(
     (a, b) => STATUT_ORDER[a.statut] - STATUT_ORDER[b.statut]
   )
+
+// Tri par date : sans date d'abord, puis par date croissante
+export const triParDate = (list, asc = true) =>
+  [...list].sort((a, b) => {
+    if (!a.date_inter && !b.date_inter) return 0
+    if (!a.date_inter) return -1           // sans date toujours en premier
+    if (!b.date_inter) return 1
+    const d = new Date(a.date_inter) - new Date(b.date_inter)
+    return asc ? d : -d
+  })
+
+// Tri générique d'une colonne (clé + sens). Champs nuls en premier en asc.
+export const triColonne = (list, cle, asc = true) =>
+  [...list].sort((a, b) => {
+    let va = a[cle], vb = b[cle]
+    // valeurs numériques (budget)
+    if (cle === 'budget') { va = Number(va) || 0; vb = Number(vb) || 0; return asc ? va - vb : vb - va }
+    // dates
+    if (cle === 'date_inter') {
+      if (!va && !vb) return 0
+      if (!va) return asc ? -1 : 1
+      if (!vb) return asc ? 1 : -1
+      const d = new Date(va) - new Date(vb)
+      return asc ? d : -d
+    }
+    // texte
+    va = (va || '').toString().toLowerCase()
+    vb = (vb || '').toString().toLowerCase()
+    return asc ? va.localeCompare(vb) : vb.localeCompare(va)
+  })

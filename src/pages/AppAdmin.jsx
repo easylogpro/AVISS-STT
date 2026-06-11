@@ -5,8 +5,8 @@ import NouveauChantier from '../components/NouveauChantier'
 import Budget from '../components/Budget'
 import GestionST from './GestionST'
 import {
-  STATUT_LABEL, MATERIEL_LABEL, eur, frDate,
-  isHistorique, triActives
+  STATUT_LABEL, STATUT_LABEL_COURT, MATERIEL_LABEL, eur, frDate,
+  isHistorique, triParDate, triColonne
 } from '../lib/helpers'
 
 const todayLabel = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
@@ -18,11 +18,12 @@ export default function AppAdmin({ profile, signOut }) {
   const [filtre, setFiltre] = useState(null)  // null | 'a_planifier' | 'en_attente' | 'nouvelles'
   const [detail, setDetail] = useState(null)
   const [validId, setValidId] = useState(null)
+  const [tri, setTri] = useState({ cle: null, asc: true })
 
   const { active, historique, stats, nbNew } = useMemo(() => {
-    const active = triActives(items.filter(i => !isHistorique(i)))
-      // les "nouvelles dates" (vue_admin false) remontent en tête
-      .sort((a, b) => (b.vue_admin === false ? 1 : 0) - (a.vue_admin === false ? 1 : 0))
+    // nouvelles dates en tête, puis sans date, puis chronologique
+    const base = triParDate(items.filter(i => !isHistorique(i)), true)
+    const active = base.sort((a, b) => (b.vue_admin === false ? 1 : 0) - (a.vue_admin === false ? 1 : 0))
     const historique = items.filter(i => isHistorique(i))
       .sort((a, b) => new Date(b.date_inter) - new Date(a.date_inter))
     const nbNew = items.filter(i => i.vue_admin === false).length
@@ -34,12 +35,18 @@ export default function AppAdmin({ profile, signOut }) {
     return { active, historique, stats, nbNew }
   }, [items])
 
-  // Liste affichée selon le filtre KPI actif
+  // Liste affichée selon le filtre KPI + tri colonne
   const affichee = useMemo(() => {
-    if (!filtre) return active
-    if (filtre === 'nouvelles') return active.filter(i => i.vue_admin === false)
-    return active.filter(i => i.statut === filtre)
-  }, [active, filtre])
+    let l = active
+    if (filtre === 'nouvelles') l = active.filter(i => i.vue_admin === false)
+    else if (filtre) l = active.filter(i => i.statut === filtre)
+    if (tri.cle) l = triColonne(l, tri.cle, tri.asc)
+    return l
+  }, [active, filtre, tri])
+
+  function trierPar(cle) {
+    setTri(t => t.cle === cle ? { cle, asc: !t.asc } : { cle, asc: true })
+  }
 
   async function onValider(id) {
     setValidId(id)
@@ -111,7 +118,7 @@ export default function AppAdmin({ profile, signOut }) {
           {!loading && !error && affichee.length > 0 && (
             view === 'cards'
               ? <CardsAdmin list={affichee} validId={validId} onOpen={setDetail} onValider={onValider} grouped={!filtre} />
-              : <TableAdmin list={affichee} validId={validId} onOpen={setDetail} onValider={onValider} />
+              : <TableAdmin list={affichee} validId={validId} onOpen={setDetail} onValider={onValider} tri={tri} trierPar={trierPar} />
           )}
         </div>
       )}
@@ -197,7 +204,7 @@ function CardsAdmin({ list, validId, onOpen, onValider, grouped = true }) {
   }
   const news = list.filter(i => i.vue_admin === false)
   const rest = list.filter(i => i.vue_admin !== false)
-  const groups = [['a_planifier', 'SANS DATE'], ['en_attente', 'À VALIDER'], ['envoye', 'VALIDÉES (à venir)']]
+  const groups = [['a_planifier', 'À PLANIFIER'], ['en_attente', 'EN ATTENTE CONFIRMATION CLIENT'], ['envoye', 'CONFIRMÉ PAR CLIENT']]
   return (
     <>
       {news.length > 0 && (
@@ -248,12 +255,28 @@ function RowCard({ i, isNew, validId, onOpen, onValider }) {
   )
 }
 
+// flèche de tri
+function SortArrow({ active, asc }) {
+  if (!active) return <span style={{ opacity: .3, marginLeft: 3 }}>↕</span>
+  return <span style={{ marginLeft: 3 }}>{asc ? '↑' : '↓'}</span>
+}
+
 // ---- tableau admin ----
-function TableAdmin({ list, validId, onOpen, onValider }) {
+function TableAdmin({ list, validId, onOpen, onValider, tri, trierPar }) {
+  const Th = ({ cle, children }) => (
+    <th style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => trierPar(cle)}>
+      {children}<SortArrow active={tri.cle === cle} asc={tri.asc} />
+    </th>
+  )
   return (
     <div className="tbl">
       <table>
-        <thead><tr><th>Site</th><th>Date</th><th>Budget</th><th>Action</th></tr></thead>
+        <thead><tr>
+          <Th cle="nom_site">Site</Th>
+          <Th cle="date_inter">Date</Th>
+          <Th cle="budget">Budget</Th>
+          <th>Action</th>
+        </tr></thead>
         <tbody>
           {list.map(i => (
             <tr key={i.id} className={(i.vue_admin === false ? 'isnew ' : '') + (i.statut === 'a_planifier' ? 'nodate' : '')}
@@ -267,7 +290,7 @@ function TableAdmin({ list, validId, onOpen, onValider }) {
               <td onClick={e => e.stopPropagation()}>
                 {i.statut === 'en_attente'
                   ? <button className="vbtn" disabled={validId === i.id} onClick={() => onValider(i.id)}>{validId === i.id ? '…' : 'Valider'}</button>
-                  : <span className={'b ' + i.statut}>{STATUT_LABEL[i.statut]}</span>}
+                  : <span className={'b ' + i.statut}>{STATUT_LABEL_COURT[i.statut]}</span>}
               </td>
             </tr>
           ))}
