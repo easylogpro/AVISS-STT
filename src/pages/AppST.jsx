@@ -107,14 +107,14 @@ export default function AppST({ profile, signOut }) {
       )}
 
       <nav className="nav">
-        <button className={'nav-a' + (tab === 'chantiers' ? ' on' : '')} onClick={() => setTab('chantiers')} style={navStyle(tab === 'chantiers')}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 11l9-8 9 8M5 10v10h14V10"/></svg>Chantiers
+        <button onClick={() => setTab('chantiers')} style={navStyle(tab === 'chantiers')}>
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 2 12h3v8h5v-6h4v6h5v-8h3z"/></svg>Chantiers
         </button>
         <button onClick={() => setTab('historique')} style={navStyle(tab === 'historique')}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 12a9 9 0 1 0 3-6.7M3 5v4h4"/><path d="M12 8v4l3 2"/></svg>Historique
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 3a9 9 0 1 0 8.94 10h-2.02A7 7 0 1 1 13 5a6.9 6.9 0 0 1 4.9 2.1L15 10h7V3l-2.6 2.6A8.97 8.97 0 0 0 13 3zm-1 4v6l5 3 .75-1.23-4.25-2.52V7z"/></svg>Historique
         </button>
         <button onClick={() => setTab('profil')} style={navStyle(tab === 'profil')}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg>Profil
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2c-5 0-9 2.5-9 6v1h18v-1c0-3.5-4-6-9-6z"/></svg>Profil
         </button>
       </nav>
 
