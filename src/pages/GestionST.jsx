@@ -1,13 +1,17 @@
 import { useState } from 'react'
 import { useGestionST } from '../hooks/useGestionST'
+import { creerAccesST } from '../lib/emails'
 
 export default function GestionST() {
-  const { list, loading, creer, toggleActif } = useGestionST()
+  const { list, loading, creer, toggleActif, refetch } = useGestionST()
   const [nom, setNom] = useState('')
   const [email, setEmail] = useState('')
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState(null)
-  const [showHelp, setShowHelp] = useState(null) // id du ST dont on montre l'aide
+  const [accesFor, setAccesFor] = useState(null)  // id du ST dont on crée l'accès
+  const [acc, setAcc] = useState({ email: '', pwd: '' })
+  const [accBusy, setAccBusy] = useState(false)
+  const [accMsg, setAccMsg] = useState(null)
 
   async function ajouter() {
     setMsg(null)
@@ -20,6 +24,28 @@ export default function GestionST() {
     } else {
       setMsg({ type: 'ok', text: `Sous-traitant "${nom}" créé.` })
       setNom(''); setEmail('')
+    }
+  }
+
+  function ouvrirAcces(st) {
+    setAccesFor(accesFor === st.id ? null : st.id)
+    setAcc({ email: st.email_login || '', pwd: '' })
+    setAccMsg(null)
+  }
+
+  async function creerAcces(st) {
+    setAccMsg(null)
+    if (!acc.email.trim() || !acc.pwd.trim()) { setAccMsg({ type: 'err', text: 'Email et mot de passe requis.' }); return }
+    if (acc.pwd.length < 6) { setAccMsg({ type: 'err', text: 'Mot de passe : 6 caractères minimum.' }); return }
+    setAccBusy(true)
+    const { error } = await creerAccesST(st.id, acc.email.trim(), acc.pwd)
+    setAccBusy(false)
+    if (error) {
+      setAccMsg({ type: 'err', text: error })
+    } else {
+      setAccMsg({ type: 'ok', text: 'Accès créé ! Communique l\'email et le mot de passe au sous-traitant.' })
+      await refetch()
+      setTimeout(() => { setAccesFor(null) }, 2500)
     }
   }
 
@@ -78,25 +104,33 @@ export default function GestionST() {
                 {st.actif ? 'Désactiver' : 'Réactiver'}
               </button>
               {!lie && (
-                <button className="btn ghost" style={{ flex: 1, fontSize: 13 }} onClick={() => setShowHelp(showHelp === st.id ? null : st.id)}>
-                  Comment connecter ?
+                <button className="btn primary" style={{ flex: 1, fontSize: 13 }} onClick={() => ouvrirAcces(st)}>
+                  {accesFor === st.id ? 'Annuler' : 'Créer l\'accès'}
                 </button>
               )}
             </div>
 
-            {showHelp === st.id && (
-              <div style={{ marginTop: 11, background: '#f6f8fa', borderRadius: 11, padding: 12, fontSize: 13, lineHeight: 1.5, color: '#475061' }}>
-                <strong>Créer son accès (dans Supabase) :</strong>
-                <div style={{ marginTop: 6 }}>1. Authentication → Users → Add user (email + mot de passe, coche Auto Confirm).</div>
-                <div style={{ marginTop: 4 }}>2. SQL Editor, exécute :</div>
-                <pre style={{ background: '#1e2a3a', color: '#d6e0ec', borderRadius: 8, padding: 10, fontSize: 11, overflowX: 'auto', marginTop: 6, whiteSpace: 'pre-wrap' }}>{`insert into profiles (id, role, nom)
-select id, 'sous_traitant', '${st.nom}'
-from auth.users where email = '${st.email_login || 'EMAIL'}';
-
-update sous_traitants
-set profile_id = (select id from auth.users
-  where email = '${st.email_login || 'EMAIL'}')
-where id = '${st.id}';`}</pre>
+            {accesFor === st.id && (
+              <div className="form" style={{ marginTop: 12, background: '#f6f8fa', borderRadius: 11, padding: 12 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>Créer le compte de connexion</div>
+                {accMsg && (
+                  <div className={accMsg.type === 'err' ? 'banner' : 'chip'}
+                    style={accMsg.type === 'ok' ? { display: 'block', marginBottom: 10 } : { marginBottom: 10 }}>
+                    {accMsg.text}
+                  </div>
+                )}
+                <label>Email de connexion</label>
+                <input type="email" value={acc.email} autoCapitalize="none"
+                  placeholder="joeli@exemple.fr"
+                  onChange={e => setAcc(s => ({ ...s, email: e.target.value }))} />
+                <label>Mot de passe (à communiquer au ST)</label>
+                <input type="text" value={acc.pwd}
+                  placeholder="6 caractères minimum"
+                  onChange={e => setAcc(s => ({ ...s, pwd: e.target.value }))} />
+                <button className="btn primary full" style={{ marginTop: 12 }}
+                  onClick={() => creerAcces(st)} disabled={accBusy}>
+                  {accBusy ? 'Création…' : 'Valider la création de l\'accès'}
+                </button>
               </div>
             )}
           </div>
