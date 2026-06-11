@@ -141,7 +141,7 @@ export default function AppAdmin({ profile, signOut }) {
           </span>
           Chantiers
         </button>
-        <button onClick={() => setTab('nouveau')} style={{ ...navStyle(false), marginTop: -30 }}>
+        <button onClick={() => setTab('nouveau')} style={{ ...navStyle(false), marginTop: -22 }}>
           <span className="plus"><span className="fab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg></span></span>
           <span style={{ fontSize: 11, color: tab === 'nouveau' ? 'var(--red)' : '#9aa6b5' }}>Nouveau</span>
         </button>
