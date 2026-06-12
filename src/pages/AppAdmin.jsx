@@ -12,12 +12,12 @@ import {
 const todayLabel = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
 
 export default function AppAdmin({ profile, signOut }) {
-  const { items, loading, error, valider, creer, updateChamps } = useInterventions()
+  const { items, loading, error, valider, envoyerClient, creer, updateChamps } = useInterventions()
   const [tab, setTab] = useState('chantiers')  // chantiers | nouveau | budget | historique | profil
   const [view, setView] = useState('cards')
   const [filtre, setFiltre] = useState(null)  // null | 'a_planifier' | 'en_attente' | 'nouvelles'
   const [detail, setDetail] = useState(null)
-  const [validId, setValidId] = useState(null)
+  const [busyId, setBusyId] = useState(null)
   const [tri, setTri] = useState({ cle: null, asc: true })
 
   const { active, historique, stats, nbNew } = useMemo(() => {
@@ -48,17 +48,24 @@ export default function AppAdmin({ profile, signOut }) {
     setTri(t => t.cle === cle ? { cle, asc: !t.asc } : { cle, asc: true })
   }
 
+  // Étape 1 : valider la date → prévient le sous-traitant
   async function onValider(id) {
-    setValidId(id)
+    setBusyId(id)
     const { error, emailError } = await valider(id)
-    setValidId(null)
-    if (error) {
-      alert('La validation a échoué. Réessaie.')
-    } else if (emailError) {
-      alert('✅ Validé.\n⚠️ Les emails n\'ont pas pu être envoyés (vérifie la configuration Resend).')
-    } else {
-      alert('✅ Validé.\n→ Email envoyé au client (date de passage)\n→ Email envoyé au sous-traitant (confirmation)')
-    }
+    setBusyId(null)
+    if (error) alert('La validation a échoué. Réessaie.')
+    else if (emailError) alert('✅ Date validée.\n⚠️ Le mail au sous-traitant n\'a pas pu partir (vérifie Resend).')
+    else alert('✅ Date validée.\n→ Le sous-traitant a été prévenu par email.')
+  }
+
+  // Étape 2 : envoyer la date au client
+  async function onEnvoyerClient(id) {
+    setBusyId(id)
+    const { error, emailError } = await envoyerClient(id)
+    setBusyId(null)
+    if (error) alert('L\'envoi au client a échoué. Réessaie.')
+    else if (emailError) alert('✅ Statut mis à jour.\n⚠️ Le mail au client n\'a pas pu partir (vérifie l\'email du client et Resend).')
+    else alert('✅ Date envoyée au client.\n→ Le client a été prévenu du passage.')
   }
 
   const nom = profile.nom || 'Admin'
@@ -117,8 +124,8 @@ export default function AppAdmin({ profile, signOut }) {
 
           {!loading && !error && affichee.length > 0 && (
             view === 'cards'
-              ? <CardsAdmin list={affichee} validId={validId} onOpen={setDetail} onValider={onValider} grouped={!filtre} />
-              : <TableAdmin list={affichee} validId={validId} onOpen={setDetail} onValider={onValider} tri={tri} trierPar={trierPar} />
+              ? <CardsAdmin list={affichee} busyId={busyId} onOpen={setDetail} onValider={onValider} onEnvoyerClient={onEnvoyerClient} grouped={!filtre} />
+              : <TableAdmin list={affichee} busyId={busyId} onOpen={setDetail} onValider={onValider} onEnvoyerClient={onEnvoyerClient} tri={tri} trierPar={trierPar} />
           )}
         </div>
       )}
@@ -195,11 +202,11 @@ function navStyle(on, color) {
 }
 
 // ---- cartes admin ----
-function CardsAdmin({ list, validId, onOpen, onValider, grouped = true }) {
+function CardsAdmin({ list, busyId, onOpen, onValider, onEnvoyerClient, grouped = true }) {
   // Mode filtré : liste simple sans regroupement par sections
   if (!grouped) {
     return list.map(i => (
-      <RowCard key={i.id} i={i} isNew={i.vue_admin === false} validId={validId} onOpen={onOpen} onValider={onValider} />
+      <RowCard key={i.id} i={i} isNew={i.vue_admin === false} busyId={busyId} onOpen={onOpen} onValider={onValider} onEnvoyerClient={onEnvoyerClient} />
     ))
   }
   const news = list.filter(i => i.vue_admin === false)
@@ -210,7 +217,7 @@ function CardsAdmin({ list, validId, onOpen, onValider, grouped = true }) {
       {news.length > 0 && (
         <>
           <div className="sectlabel new">⬤ NOUVELLES DATES À VALIDER<span className="cnt">{news.length}</span></div>
-          {news.map(i => <RowCard key={i.id} i={i} isNew validId={validId} onOpen={onOpen} onValider={onValider} />)}
+          {news.map(i => <RowCard key={i.id} i={i} isNew busyId={busyId} onOpen={onOpen} onValider={onValider} onEnvoyerClient={onEnvoyerClient} />)}
         </>
       )}
       {groups.map(([st, lab]) => {
@@ -219,7 +226,7 @@ function CardsAdmin({ list, validId, onOpen, onValider, grouped = true }) {
         return (
           <div key={st}>
             <div className="sectlabel">{lab}<span className="cnt">{arr.length}</span></div>
-            {arr.map(i => <RowCard key={i.id} i={i} validId={validId} onOpen={onOpen} onValider={onValider} />)}
+            {arr.map(i => <RowCard key={i.id} i={i} busyId={busyId} onOpen={onOpen} onValider={onValider} onEnvoyerClient={onEnvoyerClient} />)}
           </div>
         )
       })}
@@ -227,7 +234,7 @@ function CardsAdmin({ list, validId, onOpen, onValider, grouped = true }) {
   )
 }
 
-function RowCard({ i, isNew, validId, onOpen, onValider }) {
+function RowCard({ i, isNew, busyId, onOpen, onValider, onEnvoyerClient }) {
   return (
     <div className={'ch clickable' + (isNew ? ' isnew' : '') + (i.statut === 'a_planifier' ? ' nodate' : '')} onClick={() => onOpen(i)}>
       <div className="siteheader">
@@ -244,15 +251,36 @@ function RowCard({ i, isNew, validId, onOpen, onValider }) {
         <span className={'mtag' + (i.materiel_statut === 'a_envoyer' ? ' warn' : '')}>{MATERIEL_LABEL[i.materiel_statut]}</span>
       </div>
       {i.statut === 'en_attente' && (
-        <button className="btn primary full" disabled={validId === i.id}
-          onClick={e => { e.stopPropagation(); onValider(i.id) }}>
-          {validId === i.id ? 'Validation…' : 'Valider · prévenir le client'}
-        </button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <button className="btn ghost full" disabled={busyId === i.id}
+            onClick={e => { e.stopPropagation(); onValider(i.id) }}>
+            {busyId === i.id ? '…' : '1 · Valider la date (prévenir le sous-traitant)'}
+          </button>
+          <button className="btn primary full" disabled={busyId === i.id}
+            onClick={e => { e.stopPropagation(); onEnvoyerClient(i.id) }}>
+            {busyId === i.id ? '…' : '2 · Envoyer la date au client'}
+          </button>
+        </div>
       )}
-      {i.statut === 'envoye' && <span className="chip">✓ Client averti du passage le {frDate(i.date_inter)}</span>}
+      {i.statut === 'envoye' && (
+        <span className="chip">
+          ✓ Mail client envoyé{i.client_notifie_at ? ` le ${formatDateHeure(i.client_notifie_at)}` : ''}
+        </span>
+      )}
       {i.statut === 'a_planifier' && <span className="chip" style={{ background: 'var(--planbg)', color: 'var(--plan)' }}>En attente de date du sous-traitant</span>}
     </div>
   )
+}
+
+// formate "2026-06-12T14:30:00Z" en "12/06/2026 à 14h30"
+function formatDateHeure(iso) {
+  try {
+    const d = new Date(iso)
+    const date = d.toLocaleDateString('fr-FR')
+    const h = String(d.getHours()).padStart(2, '0')
+    const m = String(d.getMinutes()).padStart(2, '0')
+    return `${date} à ${h}h${m}`
+  } catch { return '' }
 }
 
 // flèche de tri
@@ -262,7 +290,7 @@ function SortArrow({ active, asc }) {
 }
 
 // ---- tableau admin ----
-function TableAdmin({ list, validId, onOpen, onValider, tri, trierPar }) {
+function TableAdmin({ list, busyId, onOpen, onValider, onEnvoyerClient, tri, trierPar }) {
   const Th = ({ cle, children }) => (
     <th style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => trierPar(cle)}>
       {children}<SortArrow active={tri.cle === cle} asc={tri.asc} />
@@ -289,7 +317,7 @@ function TableAdmin({ list, validId, onOpen, onValider, tri, trierPar }) {
               <td style={{ color: 'var(--blue)', fontWeight: 800 }}>{eur(i.budget)}</td>
               <td onClick={e => e.stopPropagation()}>
                 {i.statut === 'en_attente'
-                  ? <button className="vbtn" disabled={validId === i.id} onClick={() => onValider(i.id)}>{validId === i.id ? '…' : 'Valider'}</button>
+                  ? <button className="vbtn" disabled={busyId === i.id} onClick={() => onValider(i.id)}>{busyId === i.id ? '…' : 'Valider'}</button>
                   : <span className={'b ' + i.statut}>{STATUT_LABEL_COURT[i.statut]}</span>}
               </td>
             </tr>

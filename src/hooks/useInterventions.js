@@ -42,15 +42,29 @@ export function useInterventions() {
     return { error }
   }, [fetchItems])
 
-  // ADMIN — Valider une intervention : statut 'envoye' + marquée vue.
-  // Envoie ensuite les emails client + sous-traitant (non bloquant).
+  // ADMIN — Étape 1 : Valider la date → prévient le SOUS-TRAITANT (pas le client).
+  // Ne change PAS le statut en 'envoye' (ça se fait à l'envoi client).
   const valider = useCallback(async (id) => {
     const { error } = await supabase
       .from('interventions')
-      .update({ statut: 'envoye', vue_admin: true })
+      .update({ vue_admin: true })
       .eq('id', id)
     if (!error) {
-      const res = await envoyerEmails(id, 'validation')
+      const res = await envoyerEmails(id, 'validation_st')
+      await fetchItems()
+      return { error: null, emailError: res.error || null }
+    }
+    return { error }
+  }, [fetchItems])
+
+  // ADMIN — Étape 2 : Envoyer la date au CLIENT → statut 'envoye' + horodatage.
+  const envoyerClient = useCallback(async (id) => {
+    const { error } = await supabase
+      .from('interventions')
+      .update({ statut: 'envoye', vue_admin: true, client_notifie_at: new Date().toISOString() })
+      .eq('id', id)
+    if (!error) {
+      const res = await envoyerEmails(id, 'client')
       await fetchItems()
       return { error: null, emailError: res.error || null }
     }
@@ -81,5 +95,5 @@ export function useInterventions() {
     return { error }
   }, [fetchItems])
 
-  return { items, loading, error, refetch: fetchItems, updateDate, valider, marquerVue, creer, updateChamps }
+  return { items, loading, error, refetch: fetchItems, updateDate, valider, envoyerClient, marquerVue, creer, updateChamps }
 }

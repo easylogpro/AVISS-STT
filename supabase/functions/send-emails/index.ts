@@ -135,7 +135,15 @@ Deno.serve(async (req) => {
 
     const sent: string[] = []
 
-    if (type === 'validation') {
+    if (type === 'validation_st') {
+      // Étape 1 : prévenir le sous-traitant uniquement
+      const stMail = i.sous_traitants?.email_login
+      if (stMail) { const e = emailST(i); await sendEmail(stMail, e.subject, e.html); sent.push('sous_traitant') }
+    } else if (type === 'client') {
+      // Étape 2 : prévenir le client uniquement
+      if (i.email_client) { const e = emailClient(i); await sendEmail(i.email_client, e.subject, e.html); sent.push('client') }
+    } else if (type === 'validation') {
+      // (compatibilité ancienne) : client + ST
       if (i.email_client) { const e = emailClient(i); await sendEmail(i.email_client, e.subject, e.html); sent.push('client') }
       const stMail = i.sous_traitants?.email_login
       if (stMail) { const e = emailST(i); await sendEmail(stMail, e.subject, e.html); sent.push('sous_traitant') }
