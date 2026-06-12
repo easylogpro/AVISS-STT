@@ -20,7 +20,9 @@ export default function FicheDetail({ inter, onClose, canUpload = false, onSave 
   const [edit, setEdit] = useState({
     email_client: inter.email_client || '',
     tel_client: inter.tel_client || '',
-    date_inter: inter.date_inter || ''
+    date_inter: inter.date_inter || '',
+    materiel_statut: inter.materiel_statut || '',
+    mo_vendue: ''   // écriture seule (jamais lue depuis la table par sécurité)
   })
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -78,18 +80,23 @@ export default function FicheDetail({ inter, onClose, canUpload = false, onSave 
     const champs = {
       email_client: edit.email_client.trim() || null,
       tel_client: edit.tel_client.trim() || null,
-      date_inter: edit.date_inter || null
+      date_inter: edit.date_inter || null,
+      materiel_statut: edit.materiel_statut || null
     }
+    // MO vendue : seulement si l'admin a tapé une valeur (écriture seule)
+    if (edit.mo_vendue !== '') champs.mo_vendue = Number(edit.mo_vendue)
     const { error } = await onSave(inter.id, champs)
     setSaving(false)
-    if (!error) { setSaved(true); setTimeout(() => setSaved(false), 2500) }
+    if (!error) { setSaved(true); setEdit(s => ({ ...s, mo_vendue: '' })); setTimeout(() => setSaved(false), 2500) }
   }
 
   const hasFiles = files.pj.length > 0 || files.ph.length > 0
   const dirty = canUpload && (
     edit.email_client !== (inter.email_client || '') ||
     edit.tel_client !== (inter.tel_client || '') ||
-    edit.date_inter !== (inter.date_inter || '')
+    edit.date_inter !== (inter.date_inter || '') ||
+    edit.materiel_statut !== (inter.materiel_statut || '') ||
+    edit.mo_vendue !== ''
   )
 
   return (
@@ -133,6 +140,16 @@ export default function FicheDetail({ inter, onClose, canUpload = false, onSave 
                 <label>Téléphone client</label>
                 <input value={edit.tel_client} placeholder="01 46 00 00 00"
                   onChange={e => setEdit(s => ({ ...s, tel_client: e.target.value }))} />
+                <label>Matériel</label>
+                <select value={edit.materiel_statut}
+                  onChange={e => setEdit(s => ({ ...s, materiel_statut: e.target.value }))}>
+                  <option value="">— À choisir —</option>
+                  <option value="a_envoyer">À livrer sur site</option>
+                  <option value="dispo_magasin">Dispo magasin</option>
+                </select>
+                <label>MO vendue (€) — privé, invisible au sous-traitant</label>
+                <input type="number" value={edit.mo_vendue} placeholder="Saisir pour mettre à jour"
+                  onChange={e => setEdit(s => ({ ...s, mo_vendue: e.target.value }))} />
                 <button className="btn primary full" style={{ marginTop: 12 }}
                   onClick={save} disabled={!dirty || saving}>
                   {saving ? 'Enregistrement…' : saved ? '✓ Enregistré' : 'Enregistrer les modifications'}

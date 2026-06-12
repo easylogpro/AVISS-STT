@@ -3,7 +3,7 @@ import { useSousTraitants } from '../hooks/useSousTraitants'
 
 const EMPTY = {
   num_trx: '', num_site: '', nom_site: '', ville: '', dep: '', adresse: '',
-  nature_travaux: '', budget: '', materiel_statut: 'a_envoyer', materiel: '',
+  nature_travaux: '', budget: '', mo_vendue: '', materiel_statut: '', materiel: '',
   email_client: '', tel_client: '', sous_traitant_id: ''
 }
 
@@ -20,10 +20,14 @@ export default function NouveauChantier({ onCreate }) {
     if (!f.num_trx || !f.num_site || !f.nom_site) {
       setMsg({ type: 'err', text: 'N° TRX, N° site et Nom du site sont obligatoires.' }); return
     }
+    if (!f.materiel_statut) {
+      setMsg({ type: 'err', text: 'Choisis le matériel : « À livrer sur site » ou « Dispo magasin ».' }); return
+    }
     setBusy(true)
     const payload = {
       ...f,
       budget: f.budget === '' ? null : Number(f.budget),
+      mo_vendue: f.mo_vendue === '' ? null : Number(f.mo_vendue),
       sous_traitant_id: f.sous_traitant_id || null,
       statut: 'a_planifier'
     }
@@ -59,15 +63,21 @@ export default function NouveauChantier({ onCreate }) {
         <label>Adresse (rue) — pour Waze</label><input value={f.adresse} onChange={set('adresse')} placeholder="12 rue des Roses" />
         <label>Nature des travaux</label><textarea value={f.nature_travaux} onChange={set('nature_travaux')} placeholder="Décrire l'intervention…" />
         <div className="two">
-          <div><label>Budget (€)</label><input type="number" value={f.budget} onChange={set('budget')} placeholder="600" /></div>
-          <div><label>Matériel</label>
-            <select value={f.materiel_statut} onChange={set('materiel_statut')}>
-              <option value="a_envoyer">À envoyer</option>
-              <option value="envoye_sur_site">Sur site</option>
-              <option value="dispo_magasin">Dispo magasin</option>
-            </select>
-          </div>
+          <div><label>Coût ST (€)</label><input type="number" value={f.budget} onChange={set('budget')} placeholder="600" /></div>
+          <div><label>MO vendue (€) — privé</label><input type="number" value={f.mo_vendue} onChange={set('mo_vendue')} placeholder="1500" /></div>
         </div>
+        <label>Matériel * <span style={{ color: 'var(--wait)', fontWeight: 600 }}>(obligatoire)</span></label>
+        <select value={f.materiel_statut} onChange={set('materiel_statut')}
+          style={!f.materiel_statut ? { borderColor: 'var(--wait)' } : {}}>
+          <option value="">— À choisir —</option>
+          <option value="a_envoyer">À livrer sur site</option>
+          <option value="dispo_magasin">Dispo magasin</option>
+        </select>
+        {!f.materiel_statut && (
+          <p style={{ fontSize: 12, color: 'var(--wait)', margin: '6px 2px 0' }}>
+            ⚠ Choisis « À livrer sur site » ou « Dispo magasin ».
+          </p>
+        )}
         <label>Matériel à prévoir</label><input value={f.materiel} onChange={set('materiel')} placeholder="1 PRESSOSTAT" />
         <div className="two">
           <div><label>Email client</label><input type="email" value={f.email_client} onChange={set('email_client')} placeholder="contact@client.fr" /></div>

@@ -136,14 +136,14 @@ export default function AppST({ profile, signOut }) {
       )}
 
       <nav className="nav">
-        <button onClick={() => setTab('chantiers')} style={navStyle(tab === 'chantiers')}>
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 2 12h3v8h5v-6h4v6h5v-8h3z"/></svg>Chantiers
+        <button onClick={() => setTab('chantiers')} style={navStyle(tab === 'chantiers', '#2f6fb0')}>
+          <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M12 3 2 12h3v8h5v-6h4v6h5v-8h3z"/></svg>Chantiers
         </button>
-        <button onClick={() => setTab('historique')} style={navStyle(tab === 'historique')}>
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 3a9 9 0 1 0 8.94 10h-2.02A7 7 0 1 1 13 5a6.9 6.9 0 0 1 4.9 2.1L15 10h7V3l-2.6 2.6A8.97 8.97 0 0 0 13 3zm-1 4v6l5 3 .75-1.23-4.25-2.52V7z"/></svg>Historique
+        <button onClick={() => setTab('historique')} style={navStyle(tab === 'historique', '#7a52c7')}>
+          <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M13 3a9 9 0 1 0 8.94 10h-2.02A7 7 0 1 1 13 5a6.9 6.9 0 0 1 4.9 2.1L15 10h7V3l-2.6 2.6A8.97 8.97 0 0 0 13 3zm-1 4v6l5 3 .75-1.23-4.25-2.52V7z"/></svg>Historique
         </button>
-        <button onClick={() => setTab('profil')} style={navStyle(tab === 'profil')}>
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2c-5 0-9 2.5-9 6v1h18v-1c0-3.5-4-6-9-6z"/></svg>Profil
+        <button onClick={() => setTab('profil')} style={navStyle(tab === 'profil', '#d4537e')}>
+          <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2c-5 0-9 2.5-9 6v1h18v-1c0-3.5-4-6-9-6z"/></svg>Profil
         </button>
       </nav>
 
@@ -153,11 +153,11 @@ export default function AppST({ profile, signOut }) {
 }
 
 // style inline pour les boutons de nav (réutilise la logique .nav a)
-function navStyle(on) {
+function navStyle(on, color) {
   return {
     flex: 1, textAlign: 'center', background: 'none', border: 0, fontFamily: 'inherit',
-    color: on ? 'var(--red)' : '#9aa6b5', fontSize: 11, fontWeight: 600,
-    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, cursor: 'pointer'
+    color: on ? color : '#b7c0cc', fontSize: 10.5, fontWeight: on ? 700 : 600,
+    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, cursor: 'pointer'
   }
 }
 

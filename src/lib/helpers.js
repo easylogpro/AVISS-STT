@@ -14,7 +14,8 @@ export const STATUT_LABEL_COURT = {
 }
 
 export const MATERIEL_LABEL = {
-  a_envoyer: 'Matériel à envoyer',
+  '': 'Non défini',
+  a_envoyer: 'À livrer sur site',
   envoye_sur_site: 'Matériel sur site',
   dispo_magasin: 'Dispo magasin'
 }

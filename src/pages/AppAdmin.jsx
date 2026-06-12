@@ -124,7 +124,7 @@ export default function AppAdmin({ profile, signOut }) {
       )}
 
       {tab === 'nouveau' && <NouveauChantier onCreate={creer} />}
-      {tab === 'budget' && <Budget items={items} />}
+      {tab === 'budget' && <Budget />}
       {tab === 'sous_traitants' && <GestionST />}
 
       {tab === 'historique' && (
@@ -163,21 +163,21 @@ export default function AppAdmin({ profile, signOut }) {
       )}
 
       <nav className="nav">
-        <button onClick={() => setTab('nouveau')} style={navStyle(tab === 'nouveau')}>
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 11V5a1 1 0 1 1 2 0v6h6a1 1 0 1 1 0 2h-6v6a1 1 0 1 1-2 0v-6H5a1 1 0 1 1 0-2h6z"/></svg>Nouveau
+        <button onClick={() => setTab('nouveau')} style={navStyle(tab === 'nouveau', '#ef5a3a')}>
+          <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M11 11V5a1 1 0 1 1 2 0v6h6a1 1 0 1 1 0 2h-6v6a1 1 0 1 1-2 0v-6H5a1 1 0 1 1 0-2h6z"/></svg>Nouveau
         </button>
-        <button onClick={() => setTab('chantiers')} style={navStyle(tab === 'chantiers')}>
+        <button onClick={() => setTab('chantiers')} style={navStyle(tab === 'chantiers', '#2f6fb0')}>
           <span style={{ position: 'relative' }}>
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 2 12h3v8h5v-6h4v6h5v-8h3z"/></svg>
+            <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M12 3 2 12h3v8h5v-6h4v6h5v-8h3z"/></svg>
             {nbNew > 0 && <span className="pastille" style={{ position: 'absolute', top: -6, right: -10 }}>{nbNew}</span>}
           </span>
           Chantiers
         </button>
-        <button onClick={() => setTab('budget')} style={navStyle(tab === 'budget')}>
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 13h3v7H4zm6.5-5h3v12h-3zM17 3h3v17h-3z"/></svg>Budget
+        <button onClick={() => setTab('budget')} style={navStyle(tab === 'budget', '#1f8a4c')}>
+          <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M4 13h3v7H4zm6.5-5h3v12h-3zM17 3h3v17h-3z"/></svg>Budget
         </button>
-        <button onClick={() => setTab('historique')} style={navStyle(tab === 'historique')}>
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 3a9 9 0 1 0 8.94 10h-2.02A7 7 0 1 1 13 5a6.9 6.9 0 0 1 4.9 2.1L15 10h7V3l-2.6 2.6A8.97 8.97 0 0 0 13 3zm-1 4v6l5 3 .75-1.23-4.25-2.52V7z"/></svg>Historique
+        <button onClick={() => setTab('historique')} style={navStyle(tab === 'historique', '#7a52c7')}>
+          <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M13 3a9 9 0 1 0 8.94 10h-2.02A7 7 0 1 1 13 5a6.9 6.9 0 0 1 4.9 2.1L15 10h7V3l-2.6 2.6A8.97 8.97 0 0 0 13 3zm-1 4v6l5 3 .75-1.23-4.25-2.52V7z"/></svg>Historique
         </button>
       </nav>
 
@@ -186,11 +186,11 @@ export default function AppAdmin({ profile, signOut }) {
   )
 }
 
-function navStyle(on) {
+function navStyle(on, color) {
   return {
     flex: 1, textAlign: 'center', background: 'none', border: 0, fontFamily: 'inherit',
-    color: on ? 'var(--red)' : '#9aa6b5', fontSize: 11, fontWeight: 600,
-    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, cursor: 'pointer', position: 'relative'
+    color: on ? color : '#b7c0cc', fontSize: 10.5, fontWeight: on ? 700 : 600,
+    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, cursor: 'pointer', position: 'relative'
   }
 }
 
