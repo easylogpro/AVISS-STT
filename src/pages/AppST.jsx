@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { useInterventions } from '../hooks/useInterventions'
 import FicheDetail from '../components/FicheDetail'
 import {
-  STATUT_LABEL, STATUT_LABEL_COURT, MATERIEL_LABEL, eur, frDate, wazeUrl,
+  STATUT_LABEL, STATUT_LABEL_COURT, MATERIEL_LABEL, eur, frDate, wazeUrl, refChantier,
   isHistorique, triParDate, triColonne
 } from '../lib/helpers'
 
@@ -165,14 +165,18 @@ function navStyle(on, color) {
 function CardsST({ list, savingId, onOpen, onDateChange, grouped = true }) {
   const renderCard = (i) => (
     <div className={'ch clickable' + (i.statut === 'a_planifier' ? ' nodate' : '')} key={i.id} onClick={() => onOpen(i)}>
-      <div className="row1">
-        <div><div className="ttl">{i.nom_site}</div><div className="city">{i.ville} · {i.dep}</div></div>
-        <span className={'b ' + i.statut + ' ml'}>{STATUT_LABEL_COURT[i.statut]}</span>
+      <div className="siteheader">
+        <div>
+          <div className="sh-name">{i.nom_site}</div>
+          <div className="sh-ref">{refChantier(i)}</div>
+        </div>
+        <span className={'sh-badge ' + i.statut}>{STATUT_LABEL_COURT[i.statut]}</span>
       </div>
+      <div className="city" style={{ marginTop: -4, marginBottom: 8 }}>{i.ville} · {i.dep}</div>
       {i.nature_travaux && <div className="nat">{i.nature_travaux}</div>}
       <div className="grid2">
         <div className="field eur"><div className="k">Mon budget</div><div className="v">{eur(i.budget)}</div></div>
-        <div className="field"><div className="k">Réf. TRX</div><div className="v">{i.num_trx}</div></div>
+        <div className="field"><div className="k">Réf.</div><div className="v" style={{ fontSize: 13 }}>{refChantier(i)}</div></div>
       </div>
       <div style={{ marginTop: 9 }}>
         <span className={'mtag' + (i.materiel_statut === 'a_envoyer' ? ' warn' : '')}>{MATERIEL_LABEL[i.materiel_statut]}</span>

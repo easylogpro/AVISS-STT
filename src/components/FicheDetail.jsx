@@ -21,6 +21,7 @@ export default function FicheDetail({ inter, onClose, canUpload = false, onSave 
     email_client: inter.email_client || '',
     tel_client: inter.tel_client || '',
     date_inter: inter.date_inter || '',
+    adresse: inter.adresse || '',
     materiel_statut: inter.materiel_statut || '',
     mo_vendue: ''   // écriture seule (jamais lue depuis la table par sécurité)
   })
@@ -81,6 +82,7 @@ export default function FicheDetail({ inter, onClose, canUpload = false, onSave 
       email_client: edit.email_client.trim() || null,
       tel_client: edit.tel_client.trim() || null,
       date_inter: edit.date_inter || null,
+      adresse: edit.adresse.trim() || null,
       materiel_statut: edit.materiel_statut || null
     }
     // MO vendue : seulement si l'admin a tapé une valeur (écriture seule)
@@ -95,6 +97,7 @@ export default function FicheDetail({ inter, onClose, canUpload = false, onSave 
     edit.email_client !== (inter.email_client || '') ||
     edit.tel_client !== (inter.tel_client || '') ||
     edit.date_inter !== (inter.date_inter || '') ||
+    edit.adresse !== (inter.adresse || '') ||
     edit.materiel_statut !== (inter.materiel_statut || '') ||
     edit.mo_vendue !== ''
   )
@@ -107,15 +110,23 @@ export default function FicheDetail({ inter, onClose, canUpload = false, onSave 
           <div className="grab" />
           <button className="x" onClick={onClose} aria-label="Fermer">✕</button>
           <div className="sh-ttl">{inter.nom_site}</div>
-          <div className="sh-sub">{inter.ville} · {inter.dep} · TRX {inter.num_trx}</div>
+          <div className="sh-sub">{inter.ville} · {inter.dep} · {refChantier(inter)}</div>
         </div>
         <div className="sh-body">
           <a className="waze" href={wazeUrl(inter)} target="_blank" rel="noreferrer">
             <span className="ic">📍</span>
             <span>Naviguer avec Waze<div className="addr">{[inter.adresse, inter.ville, inter.dep].filter(Boolean).join(', ')}</div></span>
           </a>
-          {!canUpload && inter.tel_client && (
-            <a className="tel" href={`tel:${inter.tel_client.replace(/\s/g, '')}`}>📞 Appeler le site · {inter.tel_client}</a>
+
+          {/* Bloc contact client visible côté sous-traitant */}
+          {!canUpload && (inter.tel_client || inter.adresse) && (
+            <div className="clientbox">
+              <div className="cb-h">CONTACT CLIENT</div>
+              {inter.tel_client && (
+                <a className="cb-tel" href={`tel:${inter.tel_client.replace(/\s/g, '')}`}>📞 {inter.tel_client}</a>
+              )}
+              <div className="cb-addr">📍 {[inter.adresse, inter.ville, inter.dep].filter(Boolean).join(', ') || '—'}</div>
+            </div>
           )}
 
           <div style={{ height: 13 }} />
@@ -140,6 +151,9 @@ export default function FicheDetail({ inter, onClose, canUpload = false, onSave 
                 <label>Téléphone client</label>
                 <input value={edit.tel_client} placeholder="01 46 00 00 00"
                   onChange={e => setEdit(s => ({ ...s, tel_client: e.target.value }))} />
+                <label>Adresse (rue) — pour Waze</label>
+                <input value={edit.adresse} placeholder="12 rue des Lilas"
+                  onChange={e => setEdit(s => ({ ...s, adresse: e.target.value }))} />
                 <label>Matériel</label>
                 <select value={edit.materiel_statut}
                   onChange={e => setEdit(s => ({ ...s, materiel_statut: e.target.value }))}>

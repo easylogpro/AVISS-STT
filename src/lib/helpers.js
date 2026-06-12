@@ -29,6 +29,10 @@ export const eur = (n) =>
 export const frDate = (s) =>
   s ? s.split('-').reverse().join('/') : '—'
 
+// Référence chantier au format "N°site TX N°travaux" ex: 5246TX100222
+export const refChantier = (i) =>
+  `${i.num_site || ''}TX${i.num_trx || ''}`
+
 // Lien Waze : adresse + ville + dep
 export const wazeUrl = (i) => {
   const q = [i.adresse, i.ville, i.dep].filter(Boolean).join(', ')

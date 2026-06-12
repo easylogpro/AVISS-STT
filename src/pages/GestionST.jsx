@@ -3,7 +3,7 @@ import { useGestionST } from '../hooks/useGestionST'
 import { creerAccesST } from '../lib/emails'
 
 export default function GestionST() {
-  const { list, loading, creer, toggleActif, refetch } = useGestionST()
+  const { list, loading, creer, toggleActif, majST, supprimer, refetch } = useGestionST()
   const [nom, setNom] = useState('')
   const [email, setEmail] = useState('')
   const [busy, setBusy] = useState(false)
@@ -12,6 +12,29 @@ export default function GestionST() {
   const [acc, setAcc] = useState({ email: '', pwd: '' })
   const [accBusy, setAccBusy] = useState(false)
   const [accMsg, setAccMsg] = useState(null)
+  const [editFor, setEditFor] = useState(null)   // id du ST en cours d'édition
+  const [ed, setEd] = useState({ nom: '', email_login: '' })
+  const [edBusy, setEdBusy] = useState(false)
+
+  function ouvrirEdit(st) {
+    setEditFor(editFor === st.id ? null : st.id)
+    setEd({ nom: st.nom || '', email_login: st.email_login || '' })
+    setAccesFor(null)
+  }
+
+  async function enregistrerEdit(st) {
+    if (!ed.nom.trim()) return
+    setEdBusy(true)
+    const { error } = await majST(st.id, { nom: ed.nom, email_login: ed.email_login })
+    setEdBusy(false)
+    if (!error) setEditFor(null)
+  }
+
+  async function supprimerST(st) {
+    if (!confirm(`Supprimer définitivement le sous-traitant "${st.nom}" ? Cette action est irréversible.`)) return
+    const { error } = await supprimer(st.id)
+    if (error) alert('Suppression impossible : ' + (error.message || error.code || 'erreur'))
+  }
 
   async function ajouter() {
     setMsg(null)
@@ -99,7 +122,10 @@ export default function GestionST() {
                 : <span className="chip" style={{ background: 'var(--waitbg)', color: 'var(--wait)' }}>⚠ Pas encore de compte de connexion</span>}
             </div>
 
-            <div style={{ display: 'flex', gap: 8, marginTop: 11 }}>
+            <div style={{ display: 'flex', gap: 8, marginTop: 11, flexWrap: 'wrap' }}>
+              <button className="btn ghost" style={{ flex: 1, fontSize: 13 }} onClick={() => ouvrirEdit(st)}>
+                {editFor === st.id ? 'Fermer' : 'Modifier'}
+              </button>
               <button className="btn ghost" style={{ flex: 1, fontSize: 13 }} onClick={() => toggleActif(st.id, st.actif)}>
                 {st.actif ? 'Désactiver' : 'Réactiver'}
               </button>
@@ -108,7 +134,26 @@ export default function GestionST() {
                   {accesFor === st.id ? 'Annuler' : 'Créer l\'accès'}
                 </button>
               )}
+              <button className="btn" style={{ flex: 1, fontSize: 13, background: '#fdecea', color: 'var(--red)' }}
+                onClick={() => supprimerST(st)}>
+                Supprimer
+              </button>
             </div>
+
+            {editFor === st.id && (
+              <div className="form" style={{ marginTop: 12, background: '#eef4fb', borderRadius: 11, padding: 12 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>Modifier le sous-traitant</div>
+                <label>Nom</label>
+                <input value={ed.nom} onChange={e => setEd(s => ({ ...s, nom: e.target.value }))} />
+                <label>Email</label>
+                <input type="email" value={ed.email_login} autoCapitalize="none"
+                  onChange={e => setEd(s => ({ ...s, email_login: e.target.value }))} />
+                <button className="btn primary full" style={{ marginTop: 12 }}
+                  onClick={() => enregistrerEdit(st)} disabled={edBusy || !ed.nom.trim()}>
+                  {edBusy ? 'Enregistrement…' : 'Enregistrer'}
+                </button>
+              </div>
+            )}
 
             {accesFor === st.id && (
               <div className="form" style={{ marginTop: 12, background: '#f6f8fa', borderRadius: 11, padding: 12 }}>

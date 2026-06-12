@@ -92,12 +92,26 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:#cfd6d
 .chip{font-size:11px;background:var(--okbg);color:var(--ok);padding:6px 11px;border-radius:8px;font-weight:700;display:inline-block;margin-top:9px}
 
 /* TABLE */
-.tbl{background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 2px 12px rgba(30,42,58,.06)}
-.tbl table{width:100%;border-collapse:collapse}
+.tbl{background:#fff;border-radius:16px;overflow-x:auto;-webkit-overflow-scrolling:touch;box-shadow:0 2px 12px rgba(30,42,58,.06)}
+.tbl table{width:100%;border-collapse:collapse;min-width:430px}
 .tbl th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:#8693a5;padding:11px 10px;background:#f6f8fa;white-space:nowrap}
-.tbl td{padding:11px 10px;border-top:1px solid var(--line);font-size:13px;vertical-align:middle}
+.tbl td{padding:11px 10px;border-top:1px solid var(--line);font-size:13px;vertical-align:middle;white-space:nowrap}
 .tbl .site{font-weight:800}.tbl .sub{color:var(--ink2);font-size:11px}
 .tbl tr.isnew td{background:var(--newbg)}
+
+/* Bloc contact client (vue ST) */
+.clientbox{background:#f5f8fc;border:1px solid #e0e9f4;border-radius:12px;padding:11px 13px;margin-bottom:12px}
+.clientbox .cb-h{font-size:10px;font-weight:800;letter-spacing:.5px;color:#8693a5;margin-bottom:5px}
+.clientbox .cb-tel{display:inline-block;font-size:15px;font-weight:800;color:#1e2a3a;text-decoration:none;margin-bottom:3px}
+.clientbox .cb-addr{font-size:13px;color:#3a4654;line-height:1.35}
+
+/* En-tête site bleu foncé en vue carte */
+.ch .siteheader{background:#1e2a3a;margin:-15px -16px 12px;padding:13px 16px;border-radius:18px 18px 0 0;display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.ch .siteheader .sh-name{color:#fff;font-size:17px;font-weight:800;line-height:1.15}
+.ch .siteheader .sh-ref{color:#9fc4e8;font-size:12px;font-weight:700;margin-top:2px}
+.ch .siteheader .sh-badge{flex-shrink:0;font-size:10.5px;font-weight:800;padding:5px 9px;border-radius:11px;background:#2c3e52;color:#ffd9a0;white-space:nowrap}
+.ch .siteheader .sh-badge.envoye{background:#1f3a2b;color:#9be3b4}
+.ch .siteheader .sh-badge.a_planifier{background:#3a3320;color:#e8cf94}
 .tbl tr.nodate td:first-child{box-shadow:inset 3px 0 0 var(--plan)}
 .tbl .di{border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:13px;font-family:inherit;width:120px}
 .tbl .vbtn{background:linear-gradient(150deg,var(--or1),var(--or2));color:#fff;border:0;border-radius:8px;padding:6px 10px;font-size:11.5px;font-weight:800;cursor:pointer}
@@ -118,7 +132,7 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:#cfd6d
 .form textarea{min-height:70px;resize:vertical}
 
 /* NAV */
-.nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:#fff;border-top:1px solid var(--line);display:flex;justify-content:space-around;align-items:flex-end;padding:8px 8px calc(env(safe-area-inset-bottom) + 8px);z-index:50}
+.nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:#fff;border-top:1px solid var(--line);display:flex;justify-content:space-around;align-items:center;padding:6px 6px calc(env(safe-area-inset-bottom) + 6px);z-index:50}
 .nav a{flex:1;text-align:center;color:#9aa6b5;font-size:10.5px;font-weight:600;text-decoration:none;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;position:relative;background:none;border:0;font-family:inherit}
 .nav a.on{color:var(--red)}
 .nav a svg{width:19px;height:19px}

@@ -5,7 +5,7 @@ import NouveauChantier from '../components/NouveauChantier'
 import Budget from '../components/Budget'
 import GestionST from './GestionST'
 import {
-  STATUT_LABEL, STATUT_LABEL_COURT, MATERIEL_LABEL, eur, frDate,
+  STATUT_LABEL, STATUT_LABEL_COURT, MATERIEL_LABEL, eur, frDate, refChantier,
   isHistorique, triParDate, triColonne
 } from '../lib/helpers'
 
@@ -230,12 +230,12 @@ function CardsAdmin({ list, validId, onOpen, onValider, grouped = true }) {
 function RowCard({ i, isNew, validId, onOpen, onValider }) {
   return (
     <div className={'ch clickable' + (isNew ? ' isnew' : '') + (i.statut === 'a_planifier' ? ' nodate' : '')} onClick={() => onOpen(i)}>
-      <div className="row1">
+      <div className="siteheader">
         <div>
-          <div className="ttl">{i.nom_site}{isNew && <span className="newtag">NOUVELLE DATE</span>}</div>
-          <div className="city">{i.ville} · {i.dep} · TRX {i.num_trx}</div>
+          <div className="sh-name">{i.nom_site}{isNew && <span className="newtag" style={{ marginLeft: 6 }}>NOUVELLE DATE</span>}</div>
+          <div className="sh-ref">{refChantier(i)} · {i.ville} {i.dep}</div>
         </div>
-        <span className={'b ' + i.statut + ' ml'}>{STATUT_LABEL[i.statut]}</span>
+        <span className={'sh-badge ' + i.statut}>{STATUT_LABEL_COURT[i.statut]}</span>
       </div>
       {i.nature_travaux && <div className="nat">{i.nature_travaux}</div>}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', margin: '4px 0' }}>

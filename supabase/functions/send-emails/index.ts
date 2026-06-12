@@ -23,6 +23,11 @@ const cors = {
 
 const frDate = (s: string | null) => (s ? s.split('-').reverse().join('/') : '')
 
+// Référence chantier "N°site TX N°travaux" ex: 5246TX100222
+const refCh = (i: any) => `${i.num_site || ''}TX${i.num_trx || ''}`
+// Adresse complète
+const adresseComplete = (i: any) => [i.adresse, i.ville, i.dep].filter(Boolean).join(', ')
+
 // URL publique du logo AVISS (servi par l'app Vercel : public/logo-aviss.png)
 const APP_URL = Deno.env.get('APP_URL') || 'https://aviss-stt.vercel.app'
 const LOGO_URL = `${APP_URL}/logo-aviss.png`
@@ -64,7 +69,7 @@ function emailClient(i: any) {
     html: `
       <div style="font-family:Segoe UI,Arial,sans-serif;color:#1e2a3a;font-size:15px;line-height:1.5">
         <p>Bonjour,</p>
-        <p>Concernant les travaux réf. <strong>${i.num_trx}</strong> sur le site
+        <p>Concernant les travaux réf. <strong>${refCh(i)}</strong> sur le site
         <strong>${i.nom_site}</strong>${i.ville ? ` (${i.ville})` : ''}, nous vous informons qu'une intervention
         est prévue le <strong>${frDate(i.date_inter)}</strong>.</p>
         <p>Des essais et vérifications seront susceptibles d'être effectués durant ce passage.</p>
@@ -81,9 +86,13 @@ function emailST(i: any) {
       <div style="font-family:Segoe UI,Arial,sans-serif;color:#1e2a3a;font-size:15px;line-height:1.5">
         <p>Bonjour,</p>
         <p>La date d'intervention que vous avez saisie pour le chantier
-        <strong>${i.nom_site}</strong> (TRX ${i.num_trx}) a été <strong>validée</strong>.</p>
-        <p><strong>Date confirmée :</strong> ${frDate(i.date_inter)}<br/>
-        <strong>Ville :</strong> ${i.ville || '—'} (${i.dep || '—'})</p>
+        <strong>${i.nom_site}</strong> (réf. ${refCh(i)}) a été <strong>validée</strong>.</p>
+        <p><strong>Date confirmée :</strong> ${frDate(i.date_inter)}</p>
+        <div style="background:#f5f8fc;border:1px solid #e0e9f4;border-radius:8px;padding:12px 14px;margin:12px 0">
+          <div style="font-size:12px;font-weight:700;color:#8693a5;letter-spacing:.5px;margin-bottom:6px">COORDONNÉES DU SITE</div>
+          <div><strong>Adresse :</strong> ${adresseComplete(i) || '—'}</div>
+          <div><strong>Téléphone client :</strong> ${i.tel_client || '—'}</div>
+        </div>
         <p>Le client a été informé du passage.</p>
         ${signature()}
       </div>`
@@ -97,7 +106,7 @@ function emailAdmin(i: any) {
       <div style="font-family:Segoe UI,Arial,sans-serif;color:#1e2a3a;font-size:15px;line-height:1.5">
         <p>Une nouvelle date d'intervention a été saisie par le sous-traitant
         <strong>${i.sous_traitants?.nom || ''}</strong> :</p>
-        <p><strong>${i.nom_site}</strong> (TRX ${i.num_trx})<br/>
+        <p><strong>${i.nom_site}</strong> (réf. ${refCh(i)})<br/>
         ${i.ville || ''} ${i.dep ? `(${i.dep})` : ''}<br/>
         <strong>Date proposée :</strong> ${frDate(i.date_inter)}</p>
         <p>Connecte-toi à l'application AVISS STT pour la valider et prévenir le client.</p>

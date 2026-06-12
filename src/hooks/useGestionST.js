@@ -44,5 +44,28 @@ export function useGestionST() {
     return { error }
   }, [fetchAll])
 
-  return { list, loading, creer, toggleActif, majEmail, refetch: fetchAll }
+  // Modifier nom + email d'un sous-traitant
+  const majST = useCallback(async (id, { nom, email_login }) => {
+    const champs = {}
+    if (nom !== undefined) champs.nom = nom.trim()
+    if (email_login !== undefined) champs.email_login = email_login?.trim() || null
+    const { error } = await supabase
+      .from('sous_traitants')
+      .update(champs)
+      .eq('id', id)
+    if (!error) await fetchAll()
+    return { error }
+  }, [fetchAll])
+
+  // Supprimer définitivement un sous-traitant
+  const supprimer = useCallback(async (id) => {
+    const { error } = await supabase
+      .from('sous_traitants')
+      .delete()
+      .eq('id', id)
+    if (!error) await fetchAll()
+    return { error }
+  }, [fetchAll])
+
+  return { list, loading, creer, toggleActif, majEmail, majST, supprimer, refetch: fetchAll }
 }
