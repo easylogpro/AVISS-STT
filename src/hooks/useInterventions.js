@@ -77,9 +77,18 @@ export function useInterventions() {
     await fetchItems()
   }, [fetchItems])
 
-  // ADMIN — Créer un nouveau chantier.
-  const creer = useCallback(async (payload) => {
-    const { error } = await supabase.from('interventions').insert(payload)
+  // ADMIN — Créer un nouveau chantier (+ MO vendue dans la table sécurisée).
+  const creer = useCallback(async (payload, moValue = null) => {
+    const { data, error } = await supabase
+      .from('interventions')
+      .insert(payload)
+      .select('id')
+      .single()
+    if (!error && data && moValue != null) {
+      // écrit la MO dans la table protégée (échec non bloquant)
+      await supabase.from('interventions_mo')
+        .upsert({ intervention_id: data.id, mo_vendue: moValue }, { onConflict: 'intervention_id' })
+    }
     if (!error) await fetchItems()
     return { error }
   }, [fetchItems])

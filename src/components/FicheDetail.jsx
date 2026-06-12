@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useSousTraitants } from '../hooks/useSousTraitants'
+import { saveMoVendue } from '../lib/emails'
 import { STATUT_LABEL, MATERIEL_LABEL, eur, frDate, wazeUrl, refChantier } from '../lib/helpers'
 
 const BUCKETS = [
@@ -89,8 +90,10 @@ export default function FicheDetail({ inter, onClose, canUpload = false, onSave 
       materiel_statut: edit.materiel_statut || null,
       sous_traitant_id: edit.sous_traitant_id || null
     }
-    // MO vendue : seulement si l'admin a tapé une valeur (écriture seule)
-    if (edit.mo_vendue !== '') champs.mo_vendue = Number(edit.mo_vendue)
+    // MO vendue : enregistrée séparément dans la table sécurisée (jamais dans interventions)
+    if (edit.mo_vendue !== '') {
+      await saveMoVendue(inter.id, Number(edit.mo_vendue))
+    }
     const { error } = await onSave(inter.id, champs)
     setSaving(false)
     if (!error) { setSaved(true); setEdit(s => ({ ...s, mo_vendue: '' })); setTimeout(() => setSaved(false), 2500) }

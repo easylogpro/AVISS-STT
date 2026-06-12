@@ -24,14 +24,15 @@ export default function NouveauChantier({ onCreate }) {
       setMsg({ type: 'err', text: 'Choisis le matériel : « À livrer sur site » ou « Dispo magasin ».' }); return
     }
     setBusy(true)
+    const { mo_vendue, ...rest } = f
     const payload = {
-      ...f,
+      ...rest,
       budget: f.budget === '' ? null : Number(f.budget),
-      mo_vendue: f.mo_vendue === '' ? null : Number(f.mo_vendue),
       sous_traitant_id: f.sous_traitant_id || null,
       statut: 'a_planifier'
     }
-    const { error } = await onCreate(payload)
+    const moValue = mo_vendue === '' ? null : Number(mo_vendue)
+    const { error } = await onCreate(payload, moValue)
     setBusy(false)
     if (error) {
       setMsg({ type: 'err', text: error.code === '23505' ? 'Ce couple TRX / site existe déjà.' : 'Création impossible.' })

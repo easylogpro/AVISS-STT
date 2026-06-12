@@ -33,3 +33,15 @@ export async function creerAccesST(sous_traitant_id, email, password) {
     return { error: String(e) }
   }
 }
+
+// Enregistre la MO vendue dans la table sécurisée interventions_mo (admin only).
+export async function saveMoVendue(intervention_id, mo_vendue) {
+  try {
+    const { error } = await supabase
+      .from('interventions_mo')
+      .upsert({ intervention_id, mo_vendue, updated_at: new Date().toISOString() }, { onConflict: 'intervention_id' })
+    return { error }
+  } catch (e) {
+    return { error: e }
+  }
+}
