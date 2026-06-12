@@ -13,6 +13,7 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const FROM = Deno.env.get('MAIL_FROM') || 'AVISS STT <onboarding@resend.dev>'
 const ADMIN_EMAIL = Deno.env.get('ADMIN_EMAIL')! // ton email (notif nouvelles dates)
+const REPLY_TO = Deno.env.get('REPLY_TO') || 'djamel-alichikh@aviss-securite.fr' // les réponses arrivent ici
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -22,11 +23,35 @@ const cors = {
 
 const frDate = (s: string | null) => (s ? s.split('-').reverse().join('/') : '')
 
+// URL publique du logo AVISS (servi par l'app Vercel : public/logo-aviss.png)
+const APP_URL = Deno.env.get('APP_URL') || 'https://aviss-stt.vercel.app'
+const LOGO_URL = `${APP_URL}/logo-aviss.png`
+
+// Signature email complète de DJ (avec logo, fond blanc)
+function signature() {
+  return `
+    <div style="margin-top:18px;border-top:1px solid #e6e9ef;padding-top:14px;background:#ffffff;font-family:Segoe UI,Arial,sans-serif;color:#1e2a3a;font-size:14px;line-height:1.5">
+      <p style="margin:0 0 10px">Cordialement,</p>
+      <table cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:#ffffff"><tr>
+        <td style="vertical-align:middle;padding-right:16px;background:#ffffff">
+          <img src="${LOGO_URL}" alt="AVISS Services" width="110" style="display:block;background:#ffffff" />
+        </td>
+        <td style="vertical-align:middle;border-left:2px solid #c2362f;padding-left:16px;background:#ffffff">
+          <div style="font-weight:800;font-size:17px;color:#15181d">Djamel ALICHIKH</div>
+          <div style="font-style:italic;color:#454b54;margin-bottom:6px">Responsable technique</div>
+          <div style="margin:2px 0">📞 01 85 83 04 97</div>
+          <div style="margin:2px 0">✉ <a href="mailto:djamel-alichikh@aviss-securite.fr" style="color:#2c5d8a;text-decoration:none">djamel-alichikh@aviss-securite.fr</a></div>
+          <div style="margin:2px 0">🌐 <a href="https://www.aviss.fr" style="color:#2c5d8a;text-decoration:none">www.aviss.fr</a></div>
+        </td>
+      </tr></table>
+    </div>`
+}
+
 async function sendEmail(to: string, subject: string, html: string) {
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${RESEND_API_KEY}` },
-    body: JSON.stringify({ from: FROM, to: [to], subject, html })
+    body: JSON.stringify({ from: FROM, to: [to], reply_to: REPLY_TO, subject, html })
   })
   const data = await res.json()
   if (!res.ok) throw new Error(JSON.stringify(data))
@@ -39,13 +64,12 @@ function emailClient(i: any) {
     html: `
       <div style="font-family:Segoe UI,Arial,sans-serif;color:#1e2a3a;font-size:15px;line-height:1.5">
         <p>Bonjour,</p>
-        <p>Dans le cadre de la maintenance de votre installation de sécurité incendie sur le site
+        <p>Concernant les travaux réf. <strong>${i.num_trx}</strong> sur le site
         <strong>${i.nom_site}</strong>${i.ville ? ` (${i.ville})` : ''}, nous vous informons qu'une intervention
         est prévue le <strong>${frDate(i.date_inter)}</strong>.</p>
-        ${i.nature_travaux ? `<p><strong>Nature des travaux :</strong> ${i.nature_travaux}</p>` : ''}
         <p>Des essais et vérifications seront susceptibles d'être effectués durant ce passage.</p>
         <p>Nous restons à votre disposition pour toute information complémentaire.</p>
-        <p>Cordialement,<br/>Le service maintenance — AVISS Sécurité</p>
+        ${signature()}
       </div>`
   }
 }
@@ -61,7 +85,7 @@ function emailST(i: any) {
         <p><strong>Date confirmée :</strong> ${frDate(i.date_inter)}<br/>
         <strong>Ville :</strong> ${i.ville || '—'} (${i.dep || '—'})</p>
         <p>Le client a été informé du passage.</p>
-        <p>Cordialement,<br/>AVISS Sécurité</p>
+        ${signature()}
       </div>`
   }
 }
