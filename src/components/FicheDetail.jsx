@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
+import { useSousTraitants } from '../hooks/useSousTraitants'
 import { STATUT_LABEL, MATERIEL_LABEL, eur, frDate, wazeUrl, refChantier } from '../lib/helpers'
 
 const BUCKETS = [
@@ -15,6 +16,7 @@ export default function FicheDetail({ inter, onClose, canUpload = false, onSave 
   const [thumbs, setThumbs] = useState({})
   const [busy, setBusy] = useState(null)
   const inputs = { 'pieces-jointes': useRef(null), photos: useRef(null) }
+  const sts = useSousTraitants()  // liste des sous-traitants (pour réassigner, admin)
 
   // champs éditables (admin)
   const [edit, setEdit] = useState({
@@ -23,6 +25,7 @@ export default function FicheDetail({ inter, onClose, canUpload = false, onSave 
     date_inter: inter.date_inter || '',
     adresse: inter.adresse || '',
     materiel_statut: inter.materiel_statut || '',
+    sous_traitant_id: inter.sous_traitant_id || '',
     mo_vendue: ''   // écriture seule (jamais lue depuis la table par sécurité)
   })
   const [saving, setSaving] = useState(false)
@@ -83,7 +86,8 @@ export default function FicheDetail({ inter, onClose, canUpload = false, onSave 
       tel_client: edit.tel_client.trim() || null,
       date_inter: edit.date_inter || null,
       adresse: edit.adresse.trim() || null,
-      materiel_statut: edit.materiel_statut || null
+      materiel_statut: edit.materiel_statut || null,
+      sous_traitant_id: edit.sous_traitant_id || null
     }
     // MO vendue : seulement si l'admin a tapé une valeur (écriture seule)
     if (edit.mo_vendue !== '') champs.mo_vendue = Number(edit.mo_vendue)
@@ -99,6 +103,7 @@ export default function FicheDetail({ inter, onClose, canUpload = false, onSave 
     edit.date_inter !== (inter.date_inter || '') ||
     edit.adresse !== (inter.adresse || '') ||
     edit.materiel_statut !== (inter.materiel_statut || '') ||
+    edit.sous_traitant_id !== (inter.sous_traitant_id || '') ||
     edit.mo_vendue !== ''
   )
 
@@ -154,6 +159,12 @@ export default function FicheDetail({ inter, onClose, canUpload = false, onSave 
                 <label>Adresse (rue) — pour Waze</label>
                 <input value={edit.adresse} placeholder="12 rue des Lilas"
                   onChange={e => setEdit(s => ({ ...s, adresse: e.target.value }))} />
+                <label>Sous-traitant assigné</label>
+                <select value={edit.sous_traitant_id}
+                  onChange={e => setEdit(s => ({ ...s, sous_traitant_id: e.target.value }))}>
+                  <option value="">— Aucun —</option>
+                  {sts.map(s => <option key={s.id} value={s.id}>{s.nom}</option>)}
+                </select>
                 <label>Matériel</label>
                 <select value={edit.materiel_statut}
                   onChange={e => setEdit(s => ({ ...s, materiel_statut: e.target.value }))}>

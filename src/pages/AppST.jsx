@@ -213,6 +213,11 @@ function CardsST({ list, savingId, onOpen, onDateChange, grouped = true }) {
   })
 }
 
+// libellé statut très court pour le tableau (place limitée)
+function statutCourt(s) {
+  return s === 'a_planifier' ? 'À planif.' : s === 'en_attente' ? 'Attente' : 'Confirmé'
+}
+
 // flèche de tri
 function SortArrow({ active, asc }) {
   if (!active) return <span style={{ opacity: .3, marginLeft: 3 }}>↕</span>
@@ -244,7 +249,7 @@ function TableST({ list, savingId, onDateChange, tri, trierPar, onOpen }) {
               <td style={{ color: 'var(--blue)', fontWeight: 800 }}>{eur(i.budget)}</td>
               <td onClick={e => e.stopPropagation()}><input className="di" type="date" defaultValue={i.date_inter || ''}
                 onChange={e => onDateChange(i.id, e.target.value)} disabled={savingId === i.id} /></td>
-              <td><span className={'b ' + i.statut}>{STATUT_LABEL_COURT[i.statut]}</span></td>
+              <td><span className={'b ' + i.statut} style={{ fontSize: 10, padding: '3px 6px', whiteSpace: 'nowrap' }}>{statutCourt(i.statut)}</span></td>
             </tr>
           ))}
         </tbody>

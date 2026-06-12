@@ -93,10 +93,10 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:#cfd6d
 
 /* TABLE */
 .tbl{background:#fff;border-radius:16px;overflow-x:auto;-webkit-overflow-scrolling:touch;box-shadow:0 2px 12px rgba(30,42,58,.06)}
-.tbl table{width:100%;border-collapse:collapse;min-width:430px}
-.tbl th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:#8693a5;padding:11px 10px;background:#f6f8fa;white-space:nowrap}
-.tbl td{padding:11px 10px;border-top:1px solid var(--line);font-size:13px;vertical-align:middle;white-space:nowrap}
-.tbl .site{font-weight:800}.tbl .sub{color:var(--ink2);font-size:11px}
+.tbl table{width:100%;border-collapse:collapse;min-width:0}
+.tbl th{text-align:left;font-size:9.5px;text-transform:uppercase;letter-spacing:.3px;color:#8693a5;padding:9px 6px;background:#f6f8fa;white-space:nowrap}
+.tbl td{padding:9px 6px;border-top:1px solid var(--line);font-size:12px;vertical-align:middle}
+.tbl .site{font-weight:800;font-size:12.5px}.tbl .sub{color:var(--ink2);font-size:10px}
 .tbl tr.isnew td{background:var(--newbg)}
 
 /* Bloc contact client (vue ST) */
@@ -113,7 +113,7 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:#cfd6d
 .ch .siteheader .sh-badge.envoye{background:#1f3a2b;color:#9be3b4}
 .ch .siteheader .sh-badge.a_planifier{background:#3a3320;color:#e8cf94}
 .tbl tr.nodate td:first-child{box-shadow:inset 3px 0 0 var(--plan)}
-.tbl .di{border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:13px;font-family:inherit;width:120px}
+.tbl .di{border:1px solid var(--line);border-radius:8px;padding:5px 4px;font-size:11px;font-family:inherit;width:auto;max-width:108px}
 .tbl .vbtn{background:linear-gradient(150deg,var(--or1),var(--or2));color:#fff;border:0;border-radius:8px;padding:6px 10px;font-size:11.5px;font-weight:800;cursor:pointer}
 
 /* BUDGET */
