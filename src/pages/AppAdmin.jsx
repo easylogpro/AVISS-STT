@@ -154,26 +154,29 @@ export default function AppAdmin({ profile, signOut }) {
             : histAffiche.map(i => {
               const ps = [...(i.passages || [])].sort((a, b) => a.num_passage - b.num_passage)
               return (
-              <div className="ch clickable" key={i.id} onClick={() => setDetail(i)} style={{ background: '#f2f4f7' }}>
-                <div className="row1">
-                  <div><div className="ttl">{i.nom_site}</div><div className="city">{i.ville} · TRX {i.num_trx}</div></div>
-                  <span className="b hist ml">Terminé · {frDate(i.date_inter)}</span>
+              <div className="ch clickable" key={i.id} onClick={() => setDetail(i)}>
+                <div className="siteheader">
+                  <div>
+                    <div className="sh-name">{i.nom_site}</div>
+                    <div className="sh-ref">{refChantier(i)} · {i.ville}</div>
+                  </div>
+                  <span className="sh-badge envoye">Terminé · {frDate(i.date_inter)}</span>
                 </div>
-                {i.nature_travaux && <div className="nat" style={{ background: '#e8ecf1' }}>{i.nature_travaux}</div>}
+                {i.nature_travaux && <div className="nat">{i.nature_travaux}</div>}
                 {ps.length > 0 && (
-                  <div style={{ marginTop: 10 }}>
-                    <div style={{ fontSize: 11, fontWeight: 800, color: '#8693a5', letterSpacing: 1, marginBottom: 6 }}>TÂCHES EFFECTUÉES</div>
+                  <div style={{ marginTop: 4 }}>
+                    <div className="sectlabel" style={{ margin: '2px 4px 8px' }}>TÂCHES EFFECTUÉES</div>
                     {ps.map(p => (
-                      <div key={p.id} style={{ background: '#e8ecf1', borderRadius: 10, padding: '8px 11px', marginBottom: 6, fontSize: 13 }}>
-                        <strong>Passage {p.num_passage}</strong> · {p.date_inter ? frDate(p.date_inter) : 'sans date'}
-                        {p.reste_a_faire && <div style={{ color: '#475061', marginTop: 3 }}>{p.reste_a_faire}</div>}
+                      <div key={p.id} className="field" style={{ marginBottom: 6 }}>
+                        <div style={{ fontSize: 13 }}><strong>Passage {p.num_passage}</strong> · {p.date_inter ? frDate(p.date_inter) : 'sans date'}</div>
+                        {p.reste_a_faire && <div style={{ color: '#475061', marginTop: 3, fontSize: 13 }}>{p.reste_a_faire}</div>}
                       </div>
                     ))}
                   </div>
                 )}
                 <div className="grid2" style={{ marginTop: 11 }}>
-                  <div className="field eur" style={{ background: '#e8ecf1' }}><div className="k">Budget</div><div className="v">{eur(i.budget)}</div></div>
-                  <div className="field" style={{ background: '#e8ecf1' }}><div className="k">Sous-traitant</div><div className="v" style={{ fontSize: 14 }}>{i.sous_traitants?.nom || '—'}</div></div>
+                  <div className="field eur"><div className="k">Budget</div><div className="v">{eur(i.budget)}</div></div>
+                  <div className="field"><div className="k">Sous-traitant</div><div className="v" style={{ fontSize: 14 }}>{i.sous_traitants?.nom || '—'}</div></div>
                 </div>
               </div>
               )
