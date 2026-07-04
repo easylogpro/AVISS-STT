@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useSousTraitants } from '../hooks/useSousTraitants'
 import { saveMoVendue } from '../lib/emails'
-import { STATUT_LABEL, STATUT_LABEL_COURT, MATERIEL_LABEL, eur, frDate, wazeUrl, refChantier } from '../lib/helpers'
+import { STATUT_LABEL, STATUT_LABEL_COURT, MATERIEL_LABEL, eur, frDate, wazeUrl, refChantier, googleCalUrl, outlookCalUrl, telechargerIcs } from '../lib/helpers'
 
 const BUCKETS = [
   { id: 'pieces-jointes', key: 'pj', label: 'Pièce', icon: '📄', accept: '.pdf,.doc,.docx,image/*' },
@@ -256,6 +256,24 @@ export default function FicheDetail({ inter, onClose, canUpload = false, onSave,
                 </div>
                 <div style={{ fontSize: 13, marginTop: 4 }}>{p.date_inter ? '📅 ' + frDate(p.date_inter) : 'Date non posée'}</div>
                 {p.reste_a_faire && <div className="nat" style={{ marginTop: 6 }}>{p.reste_a_faire}</div>}
+                {!canUpload && p.date_inter && (
+                  <div style={{ marginTop: 10, background: '#f6f8fa', borderRadius: 10, padding: '10px 12px' }}>
+                    <div style={{ fontSize: 12.5, fontWeight: 700 }}>Ajouter cette date à mon agenda</div>
+                    <div style={{ fontSize: 11.5, color: 'var(--ink2)', marginBottom: 8 }}>Choisissez votre agenda :</div>
+                    <a className="btn ghost full" style={{ fontSize: 13, textDecoration: 'none', textAlign: 'left', display: 'block' }}
+                      href={googleCalUrl(inter, p)} target="_blank" rel="noreferrer">
+                      🟦 Google Agenda / Gmail <span style={{ color: 'var(--ink2)', fontSize: 11 }}>· ajout direct</span>
+                    </a>
+                    <a className="btn ghost full" style={{ fontSize: 13, textDecoration: 'none', textAlign: 'left', display: 'block', marginTop: 6 }}
+                      href={outlookCalUrl(inter, p)} target="_blank" rel="noreferrer">
+                      🟦 Outlook <span style={{ color: 'var(--ink2)', fontSize: 11 }}>· ajout direct</span>
+                    </a>
+                    <button className="btn ghost full" style={{ fontSize: 13, textAlign: 'left', marginTop: 6 }}
+                      onClick={() => telechargerIcs(inter, p)}>
+                      📅 Autre agenda (fichier universel) <span style={{ color: 'var(--ink2)', fontSize: 11 }}>· si les boutons ci-dessus ne marchent pas</span>
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
 

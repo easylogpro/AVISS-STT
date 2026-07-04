@@ -6,7 +6,7 @@ import Budget from '../components/Budget'
 import GestionST from './GestionST'
 import {
   STATUT_LABEL, STATUT_LABEL_COURT, MATERIEL_LABEL, eur, frDate, refChantier,
-  isHistorique, triParDate, triColonne
+  isHistorique, triParDate, triColonne, matchChantier, estNouveauPassageAdmin
 } from '../lib/helpers'
 
 const todayLabel = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
@@ -19,6 +19,7 @@ export default function AppAdmin({ profile, signOut }) {
   const [detail, setDetail] = useState(null)
   const [busyId, setBusyId] = useState(null)
   const [tri, setTri] = useState({ cle: null, asc: true })
+  const [q, setQ] = useState('')  // recherche texte
 
   const { active, historique, stats, nbNew } = useMemo(() => {
     // nouvelles dates en tête, puis sans date, puis chronologique
@@ -35,14 +36,18 @@ export default function AppAdmin({ profile, signOut }) {
     return { active, historique, stats, nbNew }
   }, [items])
 
-  // Liste affichée selon le filtre KPI + tri colonne
+  // Liste affichée selon la recherche + le filtre KPI + tri colonne
   const affichee = useMemo(() => {
     let l = active
     if (filtre === 'nouvelles') l = active.filter(i => i.vue_admin === false)
     else if (filtre) l = active.filter(i => i.statut === filtre)
+    if (q) l = l.filter(i => matchChantier(i, q))
     if (tri.cle) l = triColonne(l, tri.cle, tri.asc)
     return l
-  }, [active, filtre, tri])
+  }, [active, filtre, tri, q])
+
+  // historique filtré par la recherche
+  const histAffiche = useMemo(() => q ? historique.filter(i => matchChantier(i, q)) : historique, [historique, q])
 
   function trierPar(cle) {
     setTri(t => t.cle === cle ? { cle, asc: !t.asc } : { cle, asc: true })
@@ -97,6 +102,9 @@ export default function AppAdmin({ profile, signOut }) {
 
       {tab === 'chantiers' && (
         <div className="body">
+          <input type="search" value={q} placeholder="🔎 Rechercher un chantier (site, TRX, ville…)"
+            onChange={e => setQ(e.target.value)}
+            style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 12, padding: '11px 13px', fontSize: 15, marginBottom: 12, fontFamily: 'inherit', background: '#fff' }} />
           {filtre && (
             <div className="banner" style={{ background: 'var(--bluebg)', borderColor: '#cfe0f1', color: 'var(--blue)' }}>
               <span>Filtre : {filtre === 'nouvelles' ? 'nouvelles dates' : filtre === 'a_planifier' ? 'à planifier' : 'à valider'}</span>
@@ -138,9 +146,12 @@ export default function AppAdmin({ profile, signOut }) {
         <div className="body">
           <div className="page-h">Historique</div>
           <p className="pagesub">Interventions validées et passées.</p>
-          {historique.length === 0
+          <input type="search" value={q} placeholder="🔎 Rechercher (site, TRX, ville…)"
+            onChange={e => setQ(e.target.value)}
+            style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 12, padding: '11px 13px', fontSize: 15, marginBottom: 12, fontFamily: 'inherit', background: '#fff' }} />
+          {histAffiche.length === 0
             ? <div className="empty">Aucune intervention terminée.</div>
-            : historique.map(i => (
+            : histAffiche.map(i => (
               <div className="ch clickable" key={i.id} onClick={() => setDetail(i)}>
                 <div className="row1">
                   <div><div className="ttl">{i.nom_site}</div><div className="city">{i.ville} · TRX {i.num_trx}</div></div>
@@ -239,7 +250,7 @@ function RowCard({ i, isNew, busyId, onOpen, onValider, onEnvoyerClient }) {
     <div className={'ch clickable' + (isNew ? ' isnew' : '') + (i.statut === 'a_planifier' ? ' nodate' : '')} onClick={() => onOpen(i)}>
       <div className="siteheader">
         <div>
-          <div className="sh-name">{i.nom_site}{isNew && <span className="newtag" style={{ marginLeft: 6 }}>NOUVELLE DATE</span>}</div>
+          <div className="sh-name">{i.nom_site}{estNouveauPassageAdmin(i) ? <span className="newtag" style={{ marginLeft: 6 }}>NOUVEAU PASSAGE</span> : (isNew && <span className="newtag" style={{ marginLeft: 6 }}>NOUVELLE DATE</span>)}</div>
           <div className="sh-ref">{refChantier(i)} · {i.ville} {i.dep}</div>
         </div>
         <span className={'sh-badge ' + i.statut}>{STATUT_LABEL_COURT[i.statut]}</span>

@@ -82,3 +82,107 @@ export const triColonne = (list, cle, asc = true) =>
     vb = (vb || '').toString().toLowerCase()
     return asc ? va.localeCompare(vb) : vb.localeCompare(va)
   })
+
+// =====================================================================
+// Recherche, repères "nouveau passage" et export calendrier (ajouts)
+// =====================================================================
+
+// Recherche plein-texte sur nom du site, n° TRX, n° site et ville.
+export const matchChantier = (i, q) => {
+  const s = (q || '').trim().toLowerCase()
+  if (!s) return true
+  return [i.nom_site, i.num_trx, i.num_site, i.ville, refChantier(i)]
+    .filter(Boolean)
+    .some(v => v.toString().toLowerCase().includes(s))
+}
+
+// Nombre de passages d'un chantier (0 si non chargé).
+const nbPassages = (i) => (i.passages ? i.passages.length : 0)
+
+// ST : un passage supplémentaire est à planifier (admin l'a créé, pas encore de date).
+export const estNouveauPassageST = (i) => nbPassages(i) > 1 && i.statut === 'a_planifier'
+
+// ADMIN : un passage supplémentaire est en attente de validation.
+export const estNouveauPassageAdmin = (i) => nbPassages(i) > 1 && i.vue_admin === false
+
+// ---- Export calendrier (événement sur toute la journée) ----
+
+const pad2 = (n) => String(n).padStart(2, '0')
+// 'YYYY-MM-DD' -> 'YYYYMMDD'
+const compactDate = (s) => (s || '').replaceAll('-', '')
+// 'YYYY-MM-DD' + n jours -> 'YYYY-MM-DD'
+const addDays = (s, n) => {
+  const d = new Date(s + 'T00:00:00')
+  d.setDate(d.getDate() + n)
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
+}
+
+// Champs communs de l'événement pour un chantier i + un passage p.
+export const eventCalendrier = (i, p) => {
+  const titre = `AVISS — ${i.nom_site || ''} (${refChantier(i)})`
+  const lieu = [i.adresse, i.ville, i.dep].filter(Boolean).join(', ')
+  const lignes = []
+  if (i.nature_travaux) lignes.push(`Travaux : ${i.nature_travaux}`)
+  if (p && p.reste_a_faire) lignes.push(`Reste à faire : ${p.reste_a_faire}`)
+  if (i.tel_client) lignes.push(`Client : ${i.tel_client}`)
+  const mat = [MATERIEL_LABEL[i.materiel_statut], i.materiel].filter(Boolean).join(' — ')
+  if (mat) lignes.push(`Matériel : ${mat}`)
+  return { titre, lieu, description: lignes.join('\n'), date: p.date_inter }
+}
+
+// Échappement pour le format .ics
+const icsEscape = (t) => (t || '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n')
+
+// Contenu d'un fichier .ics (événement toute la journée).
+export const icsPassage = (i, p) => {
+  const e = eventCalendrier(i, p)
+  const start = compactDate(e.date)
+  const end = compactDate(addDays(e.date, 1))
+  const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '')
+  return [
+    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//AVISS STT//FR', 'CALSCALE:GREGORIAN',
+    'BEGIN:VEVENT',
+    `UID:${p.id || i.id}-${p.num_passage || 1}@aviss-stt`,
+    `DTSTAMP:${stamp}`,
+    `DTSTART;VALUE=DATE:${start}`,
+    `DTEND;VALUE=DATE:${end}`,
+    `SUMMARY:${icsEscape(e.titre)}`,
+    `LOCATION:${icsEscape(e.lieu)}`,
+    `DESCRIPTION:${icsEscape(e.description)}`,
+    'END:VEVENT', 'END:VCALENDAR'
+  ].join('\r\n')
+}
+
+// Lien Google Agenda (événement toute la journée).
+export const googleCalUrl = (i, p) => {
+  const e = eventCalendrier(i, p)
+  const dates = `${compactDate(e.date)}/${compactDate(addDays(e.date, 1))}`
+  const params = new URLSearchParams({
+    action: 'TEMPLATE', text: e.titre, dates, location: e.lieu, details: e.description
+  })
+  return `https://calendar.google.com/calendar/render?${params.toString()}`
+}
+
+// Lien Outlook (événement toute la journée).
+export const outlookCalUrl = (i, p) => {
+  const e = eventCalendrier(i, p)
+  const params = new URLSearchParams({
+    path: '/calendar/action/compose', rru: 'addevent',
+    subject: e.titre, startdt: e.date, enddt: addDays(e.date, 1),
+    allday: 'true', location: e.lieu, body: e.description
+  })
+  return `https://outlook.live.com/calendar/0/deeplink/compose?${params.toString()}`
+}
+
+// Déclenche le téléchargement d'un .ics (ouvre l'appli calendrier du téléphone).
+export const telechargerIcs = (i, p) => {
+  const blob = new Blob([icsPassage(i, p)], { type: 'text/calendar;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `AVISS-${refChantier(i)}-passage${p.num_passage || 1}.ics`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
+}

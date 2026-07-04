@@ -3,7 +3,7 @@ import { useInterventions } from '../hooks/useInterventions'
 import FicheDetail from '../components/FicheDetail'
 import {
   STATUT_LABEL, STATUT_LABEL_COURT, MATERIEL_LABEL, eur, frDate, wazeUrl, refChantier,
-  isHistorique, triParDate, triColonne
+  isHistorique, triParDate, triColonne, matchChantier, estNouveauPassageST
 } from '../lib/helpers'
 
 const todayLabel = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
@@ -16,6 +16,7 @@ export default function AppST({ profile, signOut }) {
   const [savingId, setSavingId] = useState(null)
   const [filtre, setFiltre] = useState(null)    // null | a_planifier | en_attente | envoye
   const [tri, setTri] = useState({ cle: null, asc: true })  // tri colonne tableau
+  const [q, setQ] = useState('')                // recherche texte
 
   const { active, historique, stats } = useMemo(() => {
     // par défaut : sans date d'abord puis chronologique
@@ -30,12 +31,19 @@ export default function AppST({ profile, signOut }) {
     return { active, historique, stats }
   }, [items])
 
-  // liste affichée : filtre KPI + tri colonne éventuel
+  // liste affichée : recherche + filtre KPI + tri colonne éventuel
   const affichee = useMemo(() => {
     let l = filtre ? active.filter(i => i.statut === filtre) : active
+    if (q) l = l.filter(i => matchChantier(i, q))
     if (tri.cle) l = triColonne(l, tri.cle, tri.asc)
     return l
-  }, [active, filtre, tri])
+  }, [active, filtre, tri, q])
+
+  // historique filtré par la recherche
+  const histAffiche = useMemo(() => q ? historique.filter(i => matchChantier(i, q)) : historique, [historique, q])
+
+  // nombre de passages supplémentaires à planifier (pastille onglet Chantiers)
+  const nbNouveauxPassages = useMemo(() => active.filter(estNouveauPassageST).length, [active])
 
   function trierPar(cle) {
     setTri(t => t.cle === cle ? { cle, asc: !t.asc } : { cle, asc: true })
@@ -73,6 +81,9 @@ export default function AppST({ profile, signOut }) {
 
       {tab === 'chantiers' && (
         <div className="body">
+          <input type="search" value={q} placeholder="🔎 Rechercher un chantier (site, TRX, ville…)"
+            onChange={e => setQ(e.target.value)}
+            style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 12, padding: '11px 13px', fontSize: 15, marginBottom: 12, fontFamily: 'inherit', background: '#fff' }} />
           {filtre && (
             <div className="banner" style={{ background: 'var(--bluebg)', borderColor: '#cfe0f1', color: 'var(--blue)' }}>
               <span>Filtre : {STATUT_LABEL_COURT[filtre]}</span>
@@ -107,9 +118,12 @@ export default function AppST({ profile, signOut }) {
         <div className="body">
           <div className="page-h">Historique</div>
           <p className="pagesub">Interventions validées et passées.</p>
-          {historique.length === 0
+          <input type="search" value={q} placeholder="🔎 Rechercher (site, TRX, ville…)"
+            onChange={e => setQ(e.target.value)}
+            style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 12, padding: '11px 13px', fontSize: 15, marginBottom: 12, fontFamily: 'inherit', background: '#fff' }} />
+          {histAffiche.length === 0
             ? <div className="empty">Aucune intervention terminée.</div>
-            : historique.map(i => (
+            : histAffiche.map(i => (
               <div className="ch clickable" key={i.id} onClick={() => setDetail(i)}>
                 <div className="row1">
                   <div><div className="ttl">{i.nom_site}</div><div className="city">{i.ville} · {i.dep}</div></div>
@@ -137,7 +151,11 @@ export default function AppST({ profile, signOut }) {
 
       <nav className="nav">
         <button onClick={() => setTab('chantiers')} style={navStyle(tab === 'chantiers', '#2f6fb0')}>
-          <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M12 3 2 12h3v8h5v-6h4v6h5v-8h3z"/></svg>Chantiers
+          <span style={{ position: 'relative' }}>
+            <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M12 3 2 12h3v8h5v-6h4v6h5v-8h3z"/></svg>
+            {nbNouveauxPassages > 0 && <span className="pastille" style={{ position: 'absolute', top: -6, right: -10 }}>{nbNouveauxPassages}</span>}
+          </span>
+          Chantiers
         </button>
         <button onClick={() => setTab('historique')} style={navStyle(tab === 'historique', '#7a52c7')}>
           <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M13 3a9 9 0 1 0 8.94 10h-2.02A7 7 0 1 1 13 5a6.9 6.9 0 0 1 4.9 2.1L15 10h7V3l-2.6 2.6A8.97 8.97 0 0 0 13 3zm-1 4v6l5 3 .75-1.23-4.25-2.52V7z"/></svg>Historique
@@ -167,7 +185,7 @@ function CardsST({ list, savingId, onOpen, onDateChange, grouped = true }) {
     <div className={'ch clickable' + (i.statut === 'a_planifier' ? ' nodate' : '')} key={i.id} onClick={() => onOpen(i)}>
       <div className="siteheader">
         <div>
-          <div className="sh-name">{i.nom_site}</div>
+          <div className="sh-name">{i.nom_site}{estNouveauPassageST(i) && <span className="newtag" style={{ marginLeft: 6 }}>NOUVEAU PASSAGE</span>}</div>
           <div className="sh-ref">{refChantier(i)}</div>
         </div>
         <span className={'sh-badge ' + i.statut}>{STATUT_LABEL_COURT[i.statut]}</span>
