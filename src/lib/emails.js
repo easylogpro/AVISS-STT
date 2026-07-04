@@ -34,6 +34,40 @@ export async function creerAccesST(sous_traitant_id, email, password) {
   }
 }
 
+// Modifie le mot de passe (code) d'un sous-traitant (Edge Function admin-only).
+export async function modifierCodeST(sous_traitant_id, password) {
+  try {
+    const { data, error } = await supabase.functions.invoke('modifier-code-st', {
+      body: { sous_traitant_id, password }
+    })
+    if (error) {
+      const msg = data?.error || error.message || 'Modification impossible.'
+      return { error: msg }
+    }
+    if (data?.error) return { error: data.error }
+    return { data }
+  } catch (e) {
+    return { error: String(e) }
+  }
+}
+
+// Envoie au sous-traitant son mail d'accès (lien appli + code + mode d'emploi).
+export async function envoyerAccesST(sous_traitant_id, password) {
+  try {
+    const { data, error } = await supabase.functions.invoke('envoyer-acces', {
+      body: { sous_traitant_id, password }
+    })
+    if (error) {
+      const msg = data?.error || error.message || 'Envoi impossible.'
+      return { error: msg }
+    }
+    if (data?.error) return { error: data.error }
+    return { data }
+  } catch (e) {
+    return { error: String(e) }
+  }
+}
+
 // Enregistre la MO vendue dans la table sécurisée interventions_mo (admin only).
 export async function saveMoVendue(intervention_id, mo_vendue) {
   try {

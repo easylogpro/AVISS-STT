@@ -114,6 +114,20 @@ function emailAdmin(i: any) {
   }
 }
 
+function emailPassageST(i: any) {
+  return {
+    subject: `Nouveau passage à planifier — ${i.nom_site}`,
+    html: `
+      <div style="font-family:Segoe UI,Arial,sans-serif;color:#1e2a3a;font-size:15px;line-height:1.5">
+        <p>Bonjour,</p>
+        <p>Une <strong>intervention supplémentaire</strong> est à planifier sur le chantier
+        <strong>${i.nom_site}</strong> (réf. ${refCh(i)})${i.ville ? `, ${i.ville}` : ''}.</p>
+        <p>Merci de vous connecter à l'application AVISS STT pour <strong>poser une date</strong> de passage.</p>
+        ${signature()}
+      </div>`
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
 
@@ -149,6 +163,10 @@ Deno.serve(async (req) => {
       if (stMail) { const e = emailST(i); await sendEmail(stMail, e.subject, e.html); sent.push('sous_traitant') }
     } else if (type === 'nouvelle_date') {
       const e = emailAdmin(i); await sendEmail(ADMIN_EMAIL, e.subject, e.html); sent.push('admin')
+    } else if (type === 'passage_st_a_planifier') {
+      // Admin a créé un passage supplémentaire -> prévenir le sous-traitant
+      const stMail = i.sous_traitants?.email_login
+      if (stMail) { const e = emailPassageST(i); await sendEmail(stMail, e.subject, e.html); sent.push('sous_traitant') }
     } else {
       return new Response(JSON.stringify({ error: 'type inconnu' }), { status: 400, headers: cors })
     }

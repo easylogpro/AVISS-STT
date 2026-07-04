@@ -10,7 +10,7 @@ export function useGestionST() {
     setLoading(true)
     const { data } = await supabase
       .from('sous_traitants')
-      .select('id, nom, email_login, profile_id, actif')
+      .select('id, nom, email_login, profile_id, actif, code_modifie_at')
       .order('nom')
     setList(data || [])
     setLoading(false)

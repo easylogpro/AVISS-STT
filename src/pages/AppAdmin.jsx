@@ -12,7 +12,7 @@ import {
 const todayLabel = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
 
 export default function AppAdmin({ profile, signOut }) {
-  const { items, loading, error, valider, envoyerClient, creer, updateChamps } = useInterventions()
+  const { items, loading, error, valider, envoyerClient, creer, creerPassage, updateChamps, supprimerChantier } = useInterventions()
   const [tab, setTab] = useState('chantiers')  // chantiers | nouveau | budget | historique | profil
   const [view, setView] = useState('cards')
   const [filtre, setFiltre] = useState(null)  // null | 'a_planifier' | 'en_attente' | 'nouvelles'
@@ -188,7 +188,7 @@ export default function AppAdmin({ profile, signOut }) {
         </button>
       </nav>
 
-      {detail && <FicheDetail inter={detail} onClose={() => setDetail(null)} canUpload onSave={updateChamps} />}
+      {detail && <FicheDetail inter={detail} onClose={() => setDetail(null)} canUpload onSave={updateChamps} onAddPassage={creerPassage} onDelete={supprimerChantier} />}
     </div>
   )
 }

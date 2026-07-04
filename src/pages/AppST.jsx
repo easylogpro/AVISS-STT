@@ -9,7 +9,7 @@ import {
 const todayLabel = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
 
 export default function AppST({ profile, signOut }) {
-  const { items, loading, error, updateDate } = useInterventions()
+  const { items, loading, error, updateDate, creerPassage } = useInterventions()
   const [tab, setTab] = useState('chantiers')   // chantiers | historique | profil
   const [view, setView] = useState('cards')     // cards | table
   const [detail, setDetail] = useState(null)
@@ -147,7 +147,7 @@ export default function AppST({ profile, signOut }) {
         </button>
       </nav>
 
-      {detail && <FicheDetail inter={detail} onClose={() => setDetail(null)} />}
+      {detail && <FicheDetail inter={detail} onClose={() => setDetail(null)} onAddPassage={creerPassage} />}
     </div>
   )
 }

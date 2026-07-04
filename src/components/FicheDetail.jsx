@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useSousTraitants } from '../hooks/useSousTraitants'
 import { saveMoVendue } from '../lib/emails'
-import { STATUT_LABEL, MATERIEL_LABEL, eur, frDate, wazeUrl, refChantier } from '../lib/helpers'
+import { STATUT_LABEL, STATUT_LABEL_COURT, MATERIEL_LABEL, eur, frDate, wazeUrl, refChantier } from '../lib/helpers'
 
 const BUCKETS = [
   { id: 'pieces-jointes', key: 'pj', label: 'Pièce', icon: '📄', accept: '.pdf,.doc,.docx,image/*' },
@@ -12,12 +12,15 @@ const BUCKETS = [
 // Fiche détail d'une intervention (bottom sheet).
 // canUpload = true (admin) -> peut éditer email/tel/date + gérer les fichiers.
 // onSave(id, champs) : callback pour enregistrer les modifs (fourni par l'admin).
-export default function FicheDetail({ inter, onClose, canUpload = false, onSave }) {
+export default function FicheDetail({ inter, onClose, canUpload = false, onSave, onAddPassage, onDelete }) {
   const [files, setFiles] = useState({ pj: [], ph: [] })
   const [thumbs, setThumbs] = useState({})
   const [busy, setBusy] = useState(null)
   const inputs = { 'pieces-jointes': useRef(null), photos: useRef(null) }
   const sts = useSousTraitants()  // liste des sous-traitants (pour réassigner, admin)
+
+  // Tous les passages du chantier (fiche unique), triés par n° croissant.
+  const passages = [...(inter.passages || [])].sort((a, b) => a.num_passage - b.num_passage)
 
   // champs éditables (admin)
   const [edit, setEdit] = useState({
@@ -27,10 +30,32 @@ export default function FicheDetail({ inter, onClose, canUpload = false, onSave 
     adresse: inter.adresse || '',
     materiel_statut: inter.materiel_statut || '',
     sous_traitant_id: inter.sous_traitant_id || '',
-    mo_vendue: ''   // écriture seule (jamais lue depuis la table par sécurité)
+    mo_vendue: ''
   })
+  const [moBaseline, setMoBaseline] = useState('')   // MO réelle chargée (pour l'affichage + détection de changement)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+
+  // Formulaire "prévoir un autre passage" + suppression
+  const [passForm, setPassForm] = useState(false)
+  const [passDate, setPassDate] = useState('')
+  const [passReste, setPassReste] = useState('')
+  const [passBusy, setPassBusy] = useState(false)
+  const [delBusy, setDelBusy] = useState(false)
+
+  // Charge la MO vendue réelle (admin) pour qu'elle reste affichée dans la fiche.
+  useEffect(() => {
+    if (!canUpload) return
+    let active = true
+    supabase.from('interventions_mo').select('mo_vendue').eq('intervention_id', inter.id).maybeSingle()
+      .then(({ data }) => {
+        if (!active) return
+        const v = data?.mo_vendue != null ? String(data.mo_vendue) : ''
+        setMoBaseline(v)
+        setEdit(s => ({ ...s, mo_vendue: v }))
+      })
+    return () => { active = false }
+  }, [inter.id, canUpload])
 
   const loadFiles = useCallback(async () => {
     const out = { pj: [], ph: [] }
@@ -90,13 +115,39 @@ export default function FicheDetail({ inter, onClose, canUpload = false, onSave 
       materiel_statut: edit.materiel_statut || null,
       sous_traitant_id: edit.sous_traitant_id || null
     }
-    // MO vendue : enregistrée séparément dans la table sécurisée (jamais dans interventions)
-    if (edit.mo_vendue !== '') {
+    // MO vendue : enregistrée séparément (table sécurisée) — seulement si changée. On ne vide plus le champ.
+    if (edit.mo_vendue !== '' && String(edit.mo_vendue) !== String(moBaseline)) {
       await saveMoVendue(inter.id, Number(edit.mo_vendue))
+      setMoBaseline(edit.mo_vendue)
     }
     const { error } = await onSave(inter.id, champs)
     setSaving(false)
-    if (!error) { setSaved(true); setEdit(s => ({ ...s, mo_vendue: '' })); setTimeout(() => setSaved(false), 2500) }
+    if (!error) { setSaved(true); setTimeout(() => setSaved(false), 2500) }
+  }
+
+  // Prévoir un autre passage (admin : sans date / ST : avec date).
+  async function ajouterPassage() {
+    if (!onAddPassage) return
+    setPassBusy(true)
+    const { error } = await onAddPassage(inter.id, {
+      date_inter: canUpload ? null : (passDate || null),
+      reste_a_faire: passReste.trim() || null,
+      byST: !canUpload
+    })
+    setPassBusy(false)
+    if (error) alert('Ajout du passage impossible : ' + (error.message || error.code || 'erreur'))
+    else onClose()
+  }
+
+  // Supprimer définitivement le chantier (admin).
+  async function supprimer() {
+    if (!onDelete) return
+    if (!confirm(`Supprimer définitivement le chantier « ${inter.nom_site} » et tous ses passages ? Cette action est irréversible.`)) return
+    setDelBusy(true)
+    const { error } = await onDelete(inter.id)
+    setDelBusy(false)
+    if (error) alert('Suppression impossible : ' + (error.message || error.code || 'erreur'))
+    else onClose()
   }
 
   const hasFiles = files.pj.length > 0 || files.ph.length > 0
@@ -107,7 +158,7 @@ export default function FicheDetail({ inter, onClose, canUpload = false, onSave 
     edit.adresse !== (inter.adresse || '') ||
     edit.materiel_statut !== (inter.materiel_statut || '') ||
     edit.sous_traitant_id !== (inter.sous_traitant_id || '') ||
-    edit.mo_vendue !== ''
+    String(edit.mo_vendue) !== String(moBaseline)
   )
 
   return (
@@ -195,6 +246,44 @@ export default function FicheDetail({ inter, onClose, canUpload = false, onSave 
               </div>
             )}
 
+            {/* PASSAGES — tous affichés sur la même fiche */}
+            <div className="sectlabel" style={{ margin: '14px 0 8px' }}>PASSAGES<span className="cnt">{passages.length}</span></div>
+            {passages.map(p => (
+              <div className="ch" key={p.id} style={{ margin: '0 0 8px', padding: '10px 12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <strong style={{ fontSize: 13 }}>Passage {p.num_passage}</strong>
+                  <span className={'b ' + p.statut} style={{ fontSize: 10, padding: '3px 6px', whiteSpace: 'nowrap' }}>{STATUT_LABEL_COURT[p.statut]}</span>
+                </div>
+                <div style={{ fontSize: 13, marginTop: 4 }}>{p.date_inter ? '📅 ' + frDate(p.date_inter) : 'Date non posée'}</div>
+                {p.reste_a_faire && <div className="nat" style={{ marginTop: 6 }}>{p.reste_a_faire}</div>}
+              </div>
+            ))}
+
+            {onAddPassage && (passForm ? (
+              <div className="form" style={{ background: '#f6f8fa', borderRadius: 11, padding: 12, marginBottom: 4 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>Nouveau passage</div>
+                {!canUpload && (<>
+                  <label>Date d'intervention</label>
+                  <input type="date" value={passDate} onChange={e => setPassDate(e.target.value)} />
+                </>)}
+                <label>Ce qu'il reste à faire</label>
+                <textarea value={passReste} placeholder="Décrire ce qu'il reste à faire…"
+                  onChange={e => setPassReste(e.target.value)} />
+                <button className="btn primary full" style={{ marginTop: 10 }}
+                  onClick={ajouterPassage} disabled={passBusy || (!canUpload && !passDate)}>
+                  {passBusy ? 'Ajout…' : 'Créer le passage'}
+                </button>
+                <button className="btn ghost full" style={{ marginTop: 6 }} onClick={() => setPassForm(false)}>Annuler</button>
+                {!canUpload && !passDate && (
+                  <p style={{ fontSize: 12, color: 'var(--wait)', marginTop: 6 }}>⚠ Choisis une date pour ce passage.</p>
+                )}
+              </div>
+            ) : (
+              <button className="btn ghost full" style={{ marginBottom: 4 }} onClick={() => setPassForm(true)}>
+                ➕ Prévoir un autre passage
+              </button>
+            ))}
+
             <div className="sectlabel" style={{ margin: '14px 0 8px' }}>PIÈCES &amp; PHOTOS</div>
             <div className="files">
               {files.pj.map(f => (
@@ -227,6 +316,13 @@ export default function FicheDetail({ inter, onClose, canUpload = false, onSave 
                   </div>
                 ))}
               </div>
+            )}
+
+            {canUpload && onDelete && (
+              <button className="btn full" style={{ marginTop: 16, background: '#fdecea', color: 'var(--red)' }}
+                onClick={supprimer} disabled={delBusy}>
+                {delBusy ? 'Suppression…' : '🗑 Supprimer ce chantier'}
+              </button>
             )}
           </div>
         </div>

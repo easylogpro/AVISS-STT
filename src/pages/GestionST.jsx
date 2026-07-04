@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { useGestionST } from '../hooks/useGestionST'
-import { creerAccesST } from '../lib/emails'
+import { creerAccesST, modifierCodeST, envoyerAccesST } from '../lib/emails'
+
+// Format court JJ/MM/AAAA
+const dateCourt = (iso) => { try { return new Date(iso).toLocaleDateString('fr-FR') } catch { return '' } }
 
 export default function GestionST() {
   const { list, loading, creer, toggleActif, majST, supprimer, refetch } = useGestionST()
@@ -15,6 +18,40 @@ export default function GestionST() {
   const [editFor, setEditFor] = useState(null)   // id du ST en cours d'édition
   const [ed, setEd] = useState({ nom: '', email_login: '' })
   const [edBusy, setEdBusy] = useState(false)
+  const [codeFor, setCodeFor] = useState(null)   // id du ST dont on gère le code
+  const [codeVal, setCodeVal] = useState('')     // nouveau code saisi
+  const [codeBusy, setCodeBusy] = useState(false)
+  const [codeMsg, setCodeMsg] = useState(null)
+  const [lastCode, setLastCode] = useState('')   // dernier code défini (pour le renvoi par mail)
+  const [resendBusy, setResendBusy] = useState(false)
+
+  function ouvrirCode(st) {
+    setCodeFor(codeFor === st.id ? null : st.id)
+    setCodeVal(''); setCodeMsg(null); setLastCode('')
+    setEditFor(null); setAccesFor(null)
+  }
+
+  async function modifierCode(st) {
+    setCodeMsg(null)
+    if (codeVal.trim().length < 6) { setCodeMsg({ type: 'err', text: 'Le code doit faire au moins 6 caractères.' }); return }
+    setCodeBusy(true)
+    const { error } = await modifierCodeST(st.id, codeVal.trim())
+    setCodeBusy(false)
+    if (error) { setCodeMsg({ type: 'err', text: error }); return }
+    setLastCode(codeVal.trim())
+    setCodeMsg({ type: 'ok', text: `✓ Code modifié le ${new Date().toLocaleDateString('fr-FR')}. Tu peux le renvoyer par mail.` })
+    await refetch()
+  }
+
+  async function renvoyerCode(st) {
+    setCodeMsg(null)
+    if (!lastCode) { setCodeMsg({ type: 'err', text: 'Modifie d\'abord le code pour pouvoir l\'envoyer.' }); return }
+    setResendBusy(true)
+    const { error } = await envoyerAccesST(st.id, lastCode)
+    setResendBusy(false)
+    if (error) setCodeMsg({ type: 'err', text: error })
+    else setCodeMsg({ type: 'ok', text: 'Mail envoyé au sous-traitant (lien, code et installation).' })
+  }
 
   function ouvrirEdit(st) {
     setEditFor(editFor === st.id ? null : st.id)
@@ -116,10 +153,13 @@ export default function GestionST() {
               </span>
             </div>
 
-            <div style={{ marginTop: 10 }}>
+            <div style={{ marginTop: 10, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               {lie
                 ? <span className="chip">✓ Compte de connexion lié</span>
                 : <span className="chip" style={{ background: 'var(--waitbg)', color: 'var(--wait)' }}>⚠ Pas encore de compte de connexion</span>}
+              {st.code_modifie_at && (
+                <span className="chip">🔑 Code modifié le {dateCourt(st.code_modifie_at)}</span>
+              )}
             </div>
 
             <div style={{ display: 'flex', gap: 8, marginTop: 11, flexWrap: 'wrap' }}>
@@ -132,6 +172,11 @@ export default function GestionST() {
               {!lie && (
                 <button className="btn primary" style={{ flex: 1, fontSize: 13 }} onClick={() => ouvrirAcces(st)}>
                   {accesFor === st.id ? 'Annuler' : 'Créer l\'accès'}
+                </button>
+              )}
+              {lie && (
+                <button className="btn ghost" style={{ flex: 1, fontSize: 13 }} onClick={() => ouvrirCode(st)}>
+                  {codeFor === st.id ? 'Fermer' : 'Gérer le code'}
                 </button>
               )}
               <button className="btn" style={{ flex: 1, fontSize: 13, background: '#fdecea', color: 'var(--red)' }}
@@ -176,6 +221,31 @@ export default function GestionST() {
                   onClick={() => creerAcces(st)} disabled={accBusy}>
                   {accBusy ? 'Création…' : 'Valider la création de l\'accès'}
                 </button>
+              </div>
+            )}
+
+            {codeFor === st.id && (
+              <div className="form" style={{ marginTop: 12, background: '#eef4fb', borderRadius: 11, padding: 12 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>Gérer le code d'accès</div>
+                {codeMsg && (
+                  <div className={codeMsg.type === 'err' ? 'banner' : 'chip'}
+                    style={codeMsg.type === 'ok' ? { display: 'block', marginBottom: 10 } : { marginBottom: 10 }}>
+                    {codeMsg.text}
+                  </div>
+                )}
+                <label>Nouveau code (mot de passe)</label>
+                <input type="text" value={codeVal} placeholder="6 caractères minimum"
+                  onChange={e => setCodeVal(e.target.value)} />
+                <button className="btn primary full" style={{ marginTop: 12 }}
+                  onClick={() => modifierCode(st)} disabled={codeBusy}>
+                  {codeBusy ? 'Modification…' : 'Modifier le code'}
+                </button>
+                {lastCode && (
+                  <button className="btn ghost full" style={{ marginTop: 8 }}
+                    onClick={() => renvoyerCode(st)} disabled={resendBusy}>
+                    {resendBusy ? 'Envoi…' : '📧 Renvoyer le code par mail'}
+                  </button>
+                )}
               </div>
             )}
           </div>

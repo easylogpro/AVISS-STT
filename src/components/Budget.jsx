@@ -70,7 +70,7 @@ export default function Budget() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', borderTop: '1px dashed var(--line)', paddingTop: 8 }}>
           <span style={{ color: 'var(--ink2)', fontWeight: 700 }}>Ratio coût / MO</span>
           <span style={{ fontSize: 24, fontWeight: 800, color: ratioColor(calc.ratioGlobal) }}>
-            {calc.ratioGlobal != null ? calc.ratioGlobal + ' %' : '—'}
+            {calc.ratioGlobal != null ? calc.ratioGlobal + ' % - ' + fmtMult(calc.coutTotal, calc.moTotal) : '—'}
           </span>
         </div>
       </div>
@@ -84,7 +84,7 @@ export default function Budget() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontWeight: 700 }}>{s.nom}</span>
               <span style={{ fontWeight: 800, fontSize: 16, color: ratioColor(s.ratio) }}>
-                {s.ratio != null ? s.ratio + ' %' : 'MO non saisie'}
+                {s.ratio != null ? s.ratio + ' % - ' + fmtMult(s.cout, s.mo) : 'MO non saisie'}
               </span>
             </div>
             <div style={{ display: 'flex', gap: 14, marginTop: 4, fontSize: 12.5, color: 'var(--ink2)' }}>
@@ -96,6 +96,7 @@ export default function Budget() {
         ))}
         <p style={{ fontSize: 11.5, color: 'var(--ink2)', marginTop: 10 }}>
           Ratio = coût sous-traitant ÷ main d'œuvre vendue. Plus c'est bas, mieux c'est.
+          Le nombre après le tiret est la correspondance : ex. « 50 % - 2 » = la MO vendue couvre 2 fois le coût.
         </p>
       </div>
 
@@ -113,6 +114,14 @@ export default function Budget() {
       </div>
     </div>
   )
+}
+
+// correspondance en multiple : MO ÷ coût (ex. ratio 50 % -> 2)
+function fmtMult(cout, mo) {
+  const c = Number(cout) || 0, m = Number(mo) || 0
+  if (c <= 0 || m <= 0) return '—'
+  const x = m / c
+  return (Math.round(x * 10) / 10).toString().replace('.', ',')
 }
 
 // vert si bas, orange si moyen, rouge si élevé
