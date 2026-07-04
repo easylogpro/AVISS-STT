@@ -186,3 +186,10 @@ export const telechargerIcs = (i, p) => {
   document.body.removeChild(a)
   setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
+
+// Passage actif (num_passage le plus élevé). Fallback synthétique si non chargé.
+export const passageActif = (i) => {
+  const ps = i.passages || []
+  if (!ps.length) return { id: i.id, num_passage: 1, date_inter: i.date_inter, reste_a_faire: null }
+  return [...ps].sort((a, b) => b.num_passage - a.num_passage)[0]
+}

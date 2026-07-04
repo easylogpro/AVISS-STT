@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react'
 import { useInterventions } from '../hooks/useInterventions'
 import FicheDetail from '../components/FicheDetail'
+import CalendarButtons from '../components/CalendarButtons'
 import {
   STATUT_LABEL, STATUT_LABEL_COURT, MATERIEL_LABEL, eur, frDate, wazeUrl, refChantier,
-  isHistorique, triParDate, triColonne, matchChantier, estNouveauPassageST
+  isHistorique, triParDate, triColonne, matchChantier, estNouveauPassageST, passageActif
 } from '../lib/helpers'
 
 const todayLabel = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
@@ -123,18 +124,33 @@ export default function AppST({ profile, signOut }) {
             style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 12, padding: '11px 13px', fontSize: 15, marginBottom: 12, fontFamily: 'inherit', background: '#fff' }} />
           {histAffiche.length === 0
             ? <div className="empty">Aucune intervention terminée.</div>
-            : histAffiche.map(i => (
-              <div className="ch clickable" key={i.id} onClick={() => setDetail(i)}>
+            : histAffiche.map(i => {
+              const ps = [...(i.passages || [])].sort((a, b) => a.num_passage - b.num_passage)
+              return (
+              <div className="ch clickable" key={i.id} onClick={() => setDetail(i)} style={{ background: '#f2f4f7' }}>
                 <div className="row1">
                   <div><div className="ttl">{i.nom_site}</div><div className="city">{i.ville} · {i.dep}</div></div>
                   <span className="b hist ml">Terminé · {frDate(i.date_inter)}</span>
                 </div>
+                {i.nature_travaux && <div className="nat" style={{ background: '#e8ecf1' }}>{i.nature_travaux}</div>}
+                {ps.length > 0 && (
+                  <div style={{ marginTop: 10 }}>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: '#8693a5', letterSpacing: 1, marginBottom: 6 }}>TÂCHES EFFECTUÉES</div>
+                    {ps.map(p => (
+                      <div key={p.id} style={{ background: '#e8ecf1', borderRadius: 10, padding: '8px 11px', marginBottom: 6, fontSize: 13 }}>
+                        <strong>Passage {p.num_passage}</strong> · {p.date_inter ? frDate(p.date_inter) : 'sans date'}
+                        {p.reste_a_faire && <div style={{ color: '#475061', marginTop: 3 }}>{p.reste_a_faire}</div>}
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <div className="grid2" style={{ marginTop: 11 }}>
-                  <div className="field eur"><div className="k">Budget</div><div className="v">{eur(i.budget)}</div></div>
-                  <div className="field"><div className="k">Réf. TRX</div><div className="v">{i.num_trx}</div></div>
+                  <div className="field eur" style={{ background: '#e8ecf1' }}><div className="k">Budget</div><div className="v">{eur(i.budget)}</div></div>
+                  <div className="field" style={{ background: '#e8ecf1' }}><div className="k">Réf. TRX</div><div className="v">{i.num_trx}</div></div>
                 </div>
               </div>
-            ))}
+              )
+            })}
         </div>
       )}
 
@@ -179,6 +195,21 @@ function navStyle(on, color) {
   }
 }
 
+// Bouton "Ajouter à l'agenda" dépliable, directement sur la carte (date confirmée)
+function CardCalendrier({ i }) {
+  const [open, setOpen] = useState(false)
+  const p = passageActif(i)
+  if (!p || !p.date_inter) return null
+  return (
+    <div style={{ marginTop: 9 }} onClick={e => e.stopPropagation()}>
+      <button className="btn ghost full" style={{ fontSize: 13 }} onClick={() => setOpen(o => !o)}>
+        📅 Ajouter à l'agenda {open ? '▲' : '▼'}
+      </button>
+      {open && <div style={{ marginTop: 8 }}><CalendarButtons inter={i} passage={p} /></div>}
+    </div>
+  )
+}
+
 // ---- Vue cartes ----
 function CardsST({ list, savingId, onOpen, onDateChange, grouped = true }) {
   const renderCard = (i) => (
@@ -208,6 +239,7 @@ function CardsST({ list, savingId, onOpen, onDateChange, grouped = true }) {
         <input className="dateinput" type="date" defaultValue={i.date_inter || ''}
           onChange={e => onDateChange(i.id, e.target.value)} disabled={savingId === i.id} />
       </div>
+      {i.statut === 'envoye' && <CardCalendrier i={i} />}
     </div>
   )
 
