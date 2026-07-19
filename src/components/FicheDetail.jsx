@@ -13,7 +13,7 @@ const BUCKETS = [
 // Fiche détail d'une intervention (bottom sheet).
 // canUpload = true (admin) -> peut éditer email/tel/date + gérer les fichiers.
 // onSave(id, champs) : callback pour enregistrer les modifs (fourni par l'admin).
-export default function FicheDetail({ inter, onClose, canUpload = false, onSave, onAddPassage, onDelete }) {
+export default function FicheDetail({ inter, onClose, canUpload = false, onSave, onAddPassage, onEditPassage, onDelete }) {
   const [files, setFiles] = useState({ pj: [], ph: [] })
   const [thumbs, setThumbs] = useState({})
   const [busy, setBusy] = useState(null)
@@ -258,19 +258,7 @@ export default function FicheDetail({ inter, onClose, canUpload = false, onSave,
             {/* PASSAGES — tous affichés sur la même fiche */}
             <div className="sectlabel" style={{ margin: '14px 0 8px' }}>PASSAGES<span className="cnt">{passages.length}</span></div>
             {passages.map(p => (
-              <div className="ch" key={p.id} style={{ margin: '0 0 8px', padding: '10px 12px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <strong style={{ fontSize: 13 }}>Passage {p.num_passage}</strong>
-                  <span className={'b ' + p.statut} style={{ fontSize: 10, padding: '3px 6px', whiteSpace: 'nowrap' }}>{STATUT_LABEL_COURT[p.statut]}</span>
-                </div>
-                <div style={{ fontSize: 13, marginTop: 4 }}>{p.date_inter ? '📅 ' + frDate(p.date_inter) : 'Date non posée'}</div>
-                {p.reste_a_faire && <div className="nat" style={{ marginTop: 6 }}>{p.reste_a_faire}</div>}
-                {!canUpload && p.date_inter && (
-                  <div style={{ marginTop: 10 }}>
-                    <CalendarButtons inter={inter} passage={p} />
-                  </div>
-                )}
-              </div>
+              <PassageItem key={p.id} p={p} inter={inter} canUpload={canUpload} onEditPassage={onEditPassage} />
             ))}
 
             {onAddPassage && (passForm ? (
@@ -284,10 +272,10 @@ export default function FicheDetail({ inter, onClose, canUpload = false, onSave,
                 <textarea value={passReste} placeholder="Décrire ce qu'il reste à faire…"
                   onChange={e => setPassReste(e.target.value)} />
                 {canUpload && (<>
-                  <label>Coût ST supplémentaire (€) — optionnel</label>
-                  <input type="number" value={passCout} placeholder="0 si aucun coût en plus"
+                  <label>Budget / coût ST de ce passage (€) — optionnel</label>
+                  <input type="number" value={passCout} placeholder="0 si aucun coût"
                     onChange={e => setPassCout(e.target.value)} />
-                  <p style={{ fontSize: 11.5, color: 'var(--ink2)', marginTop: 2 }}>Ajouté au budget du chantier et compté dans les ratios. La MO ne change pas.</p>
+                  <p style={{ fontSize: 11.5, color: 'var(--ink2)', marginTop: 2 }}>Le budget du chantier = somme des passages, compté dans les ratios. La MO ne change pas.</p>
                 </>)}
                 <button className="btn primary full" style={{ marginTop: 10 }}
                   onClick={ajouterPassage} disabled={passBusy || (!canUpload && !passDate)}>
@@ -354,4 +342,66 @@ export default function FicheDetail({ inter, onClose, canUpload = false, onSave,
 function displayName(name) {
   const n = name.replace(/^\d+_/, '')
   return n.length > 12 ? n.slice(0, 11) + '…' : n
+}
+
+// Un passage : affichage + édition admin (date, reste à faire, coût).
+function PassageItem({ p, inter, canUpload, onEditPassage }) {
+  const [editing, setEditing] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [d, setD] = useState({
+    date_inter: p.date_inter || '',
+    reste_a_faire: p.reste_a_faire || '',
+    cout: p.cout != null ? String(p.cout) : ''
+  })
+
+  async function save() {
+    if (!onEditPassage) return
+    setBusy(true)
+    const { error } = await onEditPassage(p.id, {
+      date_inter: d.date_inter || null,
+      reste_a_faire: d.reste_a_faire.trim() || null,
+      cout: Number(d.cout) || 0
+    })
+    setBusy(false)
+    if (error) alert('Modification impossible : ' + (error.message || error.code || 'erreur'))
+    else setEditing(false)
+  }
+
+  return (
+    <div className="ch" style={{ margin: '0 0 8px', padding: '10px 12px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <strong style={{ fontSize: 13 }}>Passage {p.num_passage}</strong>
+        <span className={'b ' + p.statut} style={{ fontSize: 10, padding: '3px 6px', whiteSpace: 'nowrap' }}>{STATUT_LABEL_COURT[p.statut]}</span>
+      </div>
+
+      {!editing && (<>
+        <div style={{ fontSize: 13, marginTop: 4 }}>{p.date_inter ? '📅 ' + frDate(p.date_inter) : 'Date non posée'}</div>
+        {canUpload && <div style={{ fontSize: 13, marginTop: 2, color: 'var(--ink2)' }}>💶 Coût ST : {eur(p.cout || 0)}</div>}
+        {p.reste_a_faire && <div className="nat" style={{ marginTop: 6 }}>{p.reste_a_faire}</div>}
+        {!canUpload && p.date_inter && (
+          <div style={{ marginTop: 10 }}><CalendarButtons inter={inter} passage={p} /></div>
+        )}
+        {canUpload && onEditPassage && (
+          <button className="btn ghost full" style={{ marginTop: 8, fontSize: 13 }} onClick={() => setEditing(true)}>
+            ✏️ Modifier ce passage
+          </button>
+        )}
+      </>)}
+
+      {editing && (
+        <div className="form" style={{ marginTop: 8 }}>
+          <label>Date d'intervention</label>
+          <input type="date" value={d.date_inter} onChange={e => setD(s => ({ ...s, date_inter: e.target.value }))} />
+          <label>Ce qu'il reste à faire</label>
+          <textarea value={d.reste_a_faire} onChange={e => setD(s => ({ ...s, reste_a_faire: e.target.value }))} />
+          <label>Coût ST du passage (€)</label>
+          <input type="number" value={d.cout} onChange={e => setD(s => ({ ...s, cout: e.target.value }))} />
+          <button className="btn primary full" style={{ marginTop: 10 }} onClick={save} disabled={busy}>
+            {busy ? 'Enregistrement…' : 'Enregistrer'}
+          </button>
+          <button className="btn ghost full" style={{ marginTop: 6 }} onClick={() => setEditing(false)}>Annuler</button>
+        </div>
+      )}
+    </div>
+  )
 }

@@ -15,7 +15,7 @@ export function useInterventions() {
     setLoading(true)
     const { data, error } = await supabase
       .from('interventions')
-      .select('*, sous_traitants(nom), passages(id, num_passage, date_inter, statut, vue_admin, client_notifie_at, reste_a_faire)')
+      .select('*, sous_traitants(nom), passages(id, num_passage, date_inter, statut, vue_admin, client_notifie_at, reste_a_faire, cout)')
       .order('date_inter', { ascending: true, nullsFirst: true })
     if (error) {
       setError(error)
@@ -137,21 +137,25 @@ export function useInterventions() {
       reste_a_faire: reste_a_faire || null,
       date_inter: date_inter || null,
       statut: avecDate ? 'en_attente' : 'a_planifier',
-      vue_admin: avecDate ? false : true
+      vue_admin: avecDate ? false : true,
+      // Coût ST du passage (admin uniquement). Le budget du chantier = somme des
+      // passages, recalculée automatiquement côté base par le trigger.
+      cout: byST ? 0 : (Number(cout_sup) || 0)
     }
     const { error } = await supabase.from('passages').insert(row)
     if (!error) {
-      // Coût ST supplémentaire (admin uniquement) : on l'ajoute au budget du chantier
-      const montant = Number(cout_sup) || 0
-      if (!byST && montant > 0) {
-        const { data: cur } = await supabase.from('interventions').select('budget').eq('id', intervention_id).single()
-        const nouveau = (Number(cur?.budget) || 0) + montant
-        await supabase.from('interventions').update({ budget: nouveau }).eq('id', intervention_id)
-      }
       if (avecDate) envoyerEmails(intervention_id, 'nouvelle_date')          // notif admin
       else envoyerEmails(intervention_id, 'passage_st_a_planifier')          // notif sous-traitant
       await fetchItems()
     }
+    return { error }
+  }, [fetchItems])
+
+  // ADMIN — Modifier un passage existant (reste à faire, date, coût).
+  // Le budget du chantier se recalcule automatiquement (trigger base).
+  const modifierPassage = useCallback(async (passage_id, champs) => {
+    const { error } = await supabase.from('passages').update(champs).eq('id', passage_id)
+    if (!error) await fetchItems()
     return { error }
   }, [fetchItems])
 
@@ -191,6 +195,6 @@ export function useInterventions() {
   return {
     items, loading, error, refetch: fetchItems,
     updateDate, valider, envoyerClient, marquerVue,
-    creer, creerPassage, updateChamps, supprimerChantier
+    creer, creerPassage, modifierPassage, updateChamps, supprimerChantier
   }
 }
