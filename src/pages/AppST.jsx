@@ -18,6 +18,7 @@ export default function AppST({ profile, signOut }) {
   const [filtre, setFiltre] = useState(null)    // null | a_planifier | en_attente | envoye
   const [tri, setTri] = useState({ cle: null, asc: true })  // tri colonne tableau
   const [q, setQ] = useState('')                // recherche texte
+  const [annee, setAnnee] = useState(new Date().getFullYear())  // année des KPI budget
 
   const { active, historique, stats } = useMemo(() => {
     // par défaut : sans date d'abord puis chronologique
@@ -31,6 +32,18 @@ export default function AppST({ profile, signOut }) {
     }
     return { active, historique, stats }
   }, [items])
+
+  // KPI budget par année (côté sous-traitant) : Prévu / Effectué / En cours
+  const { annees, budgetKPI } = useMemo(() => {
+    const yearOf = i => i.date_inter ? new Date(i.date_inter).getFullYear() : null
+    const set = new Set(items.map(yearOf).filter(Boolean))
+    set.add(new Date().getFullYear())
+    const annees = [...set].sort((a, b) => b - a)
+    const delAnnee = items.filter(i => yearOf(i) === annee)
+    const prevu = delAnnee.reduce((s, i) => s + (Number(i.budget) || 0), 0)
+    const effectue = delAnnee.filter(i => isHistorique(i)).reduce((s, i) => s + (Number(i.budget) || 0), 0)
+    return { annees, budgetKPI: { prevu, effectue, enCours: prevu - effectue } }
+  }, [items, annee])
 
   // liste affichée : recherche + filtre KPI + tri colonne éventuel
   const affichee = useMemo(() => {
@@ -77,6 +90,19 @@ export default function AppST({ profile, signOut }) {
             onClick={() => setFiltre(filtre === 'envoye' ? null : 'envoye')}>
             <div className="top">Confirmé</div><div className="big gr">{stats.validees}</div>
           </div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '10px 0 6px' }}>
+          <div className="date" style={{ margin: 0 }}>Budget</div>
+          <select value={annee} onChange={e => setAnnee(Number(e.target.value))}
+            style={{ background: 'rgba(255,255,255,.12)', color: '#fff', border: '1px solid rgba(255,255,255,.28)', borderRadius: 8, padding: '4px 8px', fontSize: 13, fontFamily: 'inherit' }}>
+            {annees.map(y => <option key={y} value={y} style={{ color: '#000' }}>{y}</option>)}
+          </select>
+        </div>
+        <div className="stats">
+          <div className="stat"><div className="top">Prévu {annee}</div><div className="big" style={{ fontSize: 16 }}>{eur(budgetKPI.prevu)}</div></div>
+          <div className="stat"><div className="top">En cours</div><div className="big or" style={{ fontSize: 16 }}>{eur(budgetKPI.enCours)}</div></div>
+          <div className="stat"><div className="top">Effectué</div><div className="big gr" style={{ fontSize: 16 }}>{eur(budgetKPI.effectue)}</div></div>
         </div>
       </div>
 
