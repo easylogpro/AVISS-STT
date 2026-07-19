@@ -121,7 +121,7 @@ export function useInterventions() {
   // ADMIN/ST — Prévoir un passage supplémentaire (même logique de workflow).
   //   byST + date  -> passage 'en_attente' (date envoyée), notifie l'admin.
   //   admin (sans date) -> passage 'à planifier', notifie le sous-traitant.
-  const creerPassage = useCallback(async (intervention_id, { date_inter = null, reste_a_faire = null, byST = false } = {}) => {
+  const creerPassage = useCallback(async (intervention_id, { date_inter = null, reste_a_faire = null, byST = false, cout_sup = 0 } = {}) => {
     const { data: last } = await supabase
       .from('passages')
       .select('num_passage')
@@ -141,6 +141,13 @@ export function useInterventions() {
     }
     const { error } = await supabase.from('passages').insert(row)
     if (!error) {
+      // Coût ST supplémentaire (admin uniquement) : on l'ajoute au budget du chantier
+      const montant = Number(cout_sup) || 0
+      if (!byST && montant > 0) {
+        const { data: cur } = await supabase.from('interventions').select('budget').eq('id', intervention_id).single()
+        const nouveau = (Number(cur?.budget) || 0) + montant
+        await supabase.from('interventions').update({ budget: nouveau }).eq('id', intervention_id)
+      }
       if (avecDate) envoyerEmails(intervention_id, 'nouvelle_date')          // notif admin
       else envoyerEmails(intervention_id, 'passage_st_a_planifier')          // notif sous-traitant
       await fetchItems()

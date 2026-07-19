@@ -29,6 +29,7 @@ export default function FicheDetail({ inter, onClose, canUpload = false, onSave,
     tel_client: inter.tel_client || '',
     date_inter: inter.date_inter || '',
     adresse: inter.adresse || '',
+    nature_travaux: inter.nature_travaux || '',
     materiel_statut: inter.materiel_statut || '',
     sous_traitant_id: inter.sous_traitant_id || '',
     mo_vendue: ''
@@ -41,6 +42,7 @@ export default function FicheDetail({ inter, onClose, canUpload = false, onSave,
   const [passForm, setPassForm] = useState(false)
   const [passDate, setPassDate] = useState('')
   const [passReste, setPassReste] = useState('')
+  const [passCout, setPassCout] = useState('')
   const [passBusy, setPassBusy] = useState(false)
   const [delBusy, setDelBusy] = useState(false)
 
@@ -113,6 +115,7 @@ export default function FicheDetail({ inter, onClose, canUpload = false, onSave,
       tel_client: edit.tel_client.trim() || null,
       date_inter: edit.date_inter || null,
       adresse: edit.adresse.trim() || null,
+      nature_travaux: edit.nature_travaux.trim() || null,
       materiel_statut: edit.materiel_statut || null,
       sous_traitant_id: edit.sous_traitant_id || null
     }
@@ -133,7 +136,8 @@ export default function FicheDetail({ inter, onClose, canUpload = false, onSave,
     const { error } = await onAddPassage(inter.id, {
       date_inter: canUpload ? null : (passDate || null),
       reste_a_faire: passReste.trim() || null,
-      byST: !canUpload
+      byST: !canUpload,
+      cout_sup: canUpload ? (Number(passCout) || 0) : 0
     })
     setPassBusy(false)
     if (error) alert('Ajout du passage impossible : ' + (error.message || error.code || 'erreur'))
@@ -157,6 +161,7 @@ export default function FicheDetail({ inter, onClose, canUpload = false, onSave,
     edit.tel_client !== (inter.tel_client || '') ||
     edit.date_inter !== (inter.date_inter || '') ||
     edit.adresse !== (inter.adresse || '') ||
+    edit.nature_travaux !== (inter.nature_travaux || '') ||
     edit.materiel_statut !== (inter.materiel_statut || '') ||
     edit.sous_traitant_id !== (inter.sous_traitant_id || '') ||
     String(edit.mo_vendue) !== String(moBaseline)
@@ -191,7 +196,7 @@ export default function FicheDetail({ inter, onClose, canUpload = false, onSave,
 
           <div style={{ height: 13 }} />
           <div className="ch" style={{ margin: 0 }}>
-            {inter.nature_travaux && <div className="nat" style={{ marginTop: 0 }}>{inter.nature_travaux}</div>}
+            {!canUpload && inter.nature_travaux && <div className="nat" style={{ marginTop: 0 }}>{inter.nature_travaux}</div>}
             <div className="dl">
               <div className="field eur"><div className="k">Budget</div><div className="v">{eur(inter.budget)}</div></div>
               <div className="field"><div className="k">Matériel</div><div className="v" style={{ fontSize: 13 }}>{MATERIEL_LABEL[inter.materiel_statut] || '—'}</div></div>
@@ -202,6 +207,9 @@ export default function FicheDetail({ inter, onClose, canUpload = false, onSave,
             {/* ZONE ÉDITABLE ADMIN */}
             {canUpload ? (
               <div className="form" style={{ marginTop: 4 }}>
+                <label>Nature des travaux</label>
+                <textarea value={edit.nature_travaux} placeholder="Décrire l'intervention…"
+                  onChange={e => setEdit(s => ({ ...s, nature_travaux: e.target.value }))} />
                 <label>Date d'intervention</label>
                 <input type="date" value={edit.date_inter}
                   onChange={e => setEdit(s => ({ ...s, date_inter: e.target.value }))} />
@@ -275,6 +283,12 @@ export default function FicheDetail({ inter, onClose, canUpload = false, onSave,
                 <label>Ce qu'il reste à faire</label>
                 <textarea value={passReste} placeholder="Décrire ce qu'il reste à faire…"
                   onChange={e => setPassReste(e.target.value)} />
+                {canUpload && (<>
+                  <label>Coût ST supplémentaire (€) — optionnel</label>
+                  <input type="number" value={passCout} placeholder="0 si aucun coût en plus"
+                    onChange={e => setPassCout(e.target.value)} />
+                  <p style={{ fontSize: 11.5, color: 'var(--ink2)', marginTop: 2 }}>Ajouté au budget du chantier et compté dans les ratios. La MO ne change pas.</p>
+                </>)}
                 <button className="btn primary full" style={{ marginTop: 10 }}
                   onClick={ajouterPassage} disabled={passBusy || (!canUpload && !passDate)}>
                   {passBusy ? 'Ajout…' : 'Créer le passage'}
