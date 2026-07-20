@@ -67,16 +67,17 @@ export default function NouveauChantier({ onCreate }) {
           <div><label>Coût ST (€)</label><input type="number" value={f.budget} onChange={set('budget')} placeholder="600" /></div>
           <div><label>MO vendue (€) — privé</label><input type="number" value={f.mo_vendue} onChange={set('mo_vendue')} placeholder="1500" /></div>
         </div>
-        <label>Matériel * <span style={{ color: 'var(--wait)', fontWeight: 600 }}>(obligatoire)</span></label>
+        <label>Matériel AVISS * <span style={{ color: 'var(--wait)', fontWeight: 600 }}>(obligatoire)</span></label>
         <select value={f.materiel_statut} onChange={set('materiel_statut')}
           style={!f.materiel_statut ? { borderColor: 'var(--wait)' } : {}}>
           <option value="">— À choisir —</option>
           <option value="a_envoyer">À livrer sur site</option>
           <option value="dispo_magasin">Dispo magasin</option>
+          <option value="pas_de_materiel">Pas de matériel</option>
         </select>
         {!f.materiel_statut && (
           <p style={{ fontSize: 12, color: 'var(--wait)', margin: '6px 2px 0' }}>
-            ⚠ Choisis « À livrer sur site » ou « Dispo magasin ».
+            ⚠ Choisis une option de matériel.
           </p>
         )}
         <label>Matériel à prévoir</label><input value={f.materiel} onChange={set('materiel')} placeholder="1 PRESSOSTAT" />

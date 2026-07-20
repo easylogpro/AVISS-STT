@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { useInterventions } from '../hooks/useInterventions'
 import FicheDetail from '../components/FicheDetail'
 import CalendarButtons from '../components/CalendarButtons'
+import HistTable from '../components/HistTable'
 import {
   STATUT_LABEL, STATUT_LABEL_COURT, MATERIEL_LABEL, eur, frDate, wazeUrl, refChantier,
   isHistorique, triParDate, triColonne, matchChantier, estNouveauPassageST, passageActif
@@ -19,6 +20,7 @@ export default function AppST({ profile, signOut }) {
   const [tri, setTri] = useState({ cle: null, asc: true })  // tri colonne tableau
   const [q, setQ] = useState('')                // recherche texte
   const [annee, setAnnee] = useState(new Date().getFullYear())  // année des KPI budget
+  const [histView, setHistView] = useState('cards')  // vue historique : cards | table
 
   const { active, historique, stats } = useMemo(() => {
     // par défaut : sans date d'abord puis chronologique
@@ -148,8 +150,21 @@ export default function AppST({ profile, signOut }) {
           <input type="search" value={q} placeholder="🔎 Rechercher (site, TRX, ville…)"
             onChange={e => setQ(e.target.value)}
             style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 12, padding: '11px 13px', fontSize: 15, marginBottom: 12, fontFamily: 'inherit', background: '#fff' }} />
+          <div className="toolbar">
+            <span className="lbl">{histAffiche.length} terminé{histAffiche.length > 1 ? 's' : ''}</span>
+            <div className="seg">
+              <button className={histView === 'cards' ? 'on' : ''} onClick={() => setHistView('cards')}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="7" rx="1"/><rect x="3" y="14" width="18" height="7" rx="1"/></svg>Cartes
+              </button>
+              <button className={histView === 'table' ? 'on' : ''} onClick={() => setHistView('table')}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 5h18M3 12h18M3 19h18"/></svg>Tableau
+              </button>
+            </div>
+          </div>
           {histAffiche.length === 0
             ? <div className="empty">Aucune intervention terminée.</div>
+            : histView === 'table'
+            ? <HistTable list={histAffiche} onOpen={setDetail} admin={false} />
             : histAffiche.map(i => {
               const ps = [...(i.passages || [])].sort((a, b) => a.num_passage - b.num_passage)
               return (
@@ -258,7 +273,7 @@ function CardsST({ list, savingId, onOpen, onDateChange, grouped = true }) {
       </div>
       <div style={{ marginTop: 9 }}>
         <span className={'mtag' + (i.materiel_statut === 'a_envoyer' ? ' warn' : '')}>{MATERIEL_LABEL[i.materiel_statut]}</span>
-        {i.materiel && <span className="mtag">{i.materiel}</span>}
+        {i.materiel && <span className="mtag">À prévoir ({i.sous_traitants?.nom || '—'}) : {i.materiel}</span>}
       </div>
       <a className="waze" href={wazeUrl(i)} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}>
         <span className="ic">📍</span><span>Ouvrir dans Waze<div className="addr">{[i.adresse, i.ville].filter(Boolean).join(', ')}</div></span>

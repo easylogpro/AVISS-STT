@@ -199,10 +199,16 @@ export default function FicheDetail({ inter, onClose, canUpload = false, onSave,
             {!canUpload && inter.nature_travaux && <div className="nat" style={{ marginTop: 0 }}>{inter.nature_travaux}</div>}
             <div className="dl">
               <div className="field eur"><div className="k">Budget</div><div className="v">{eur(inter.budget)}</div></div>
-              <div className="field"><div className="k">Matériel</div><div className="v" style={{ fontSize: 13 }}>{MATERIEL_LABEL[inter.materiel_statut] || '—'}</div></div>
-              <div className="field"><div className="k">À prévoir</div><div className="v" style={{ fontSize: 13 }}>{inter.materiel || '—'}</div></div>
+              <div className="field"><div className="k">Matériel AVISS</div><div className="v" style={{ fontSize: 13 }}>{MATERIEL_LABEL[inter.materiel_statut] || '—'}</div></div>
+              <div className="field"><div className="k">À prévoir par {inter.sous_traitants?.nom || '—'}</div><div className="v" style={{ fontSize: 13 }}>{inter.materiel || '—'}</div></div>
               <div className="field"><div className="k">Statut</div><div className="v" style={{ fontSize: 13 }}>{STATUT_LABEL[inter.statut]}</div></div>
             </div>
+            {passages.filter(p => p.date_inter).length > 1 && (
+              <div className="field" style={{ marginTop: 8 }}>
+                <div className="k">Dates de passage</div>
+                <div className="v" style={{ fontSize: 13 }}>{passages.filter(p => p.date_inter).map(p => frDate(p.date_inter)).join(' · ')}</div>
+              </div>
+            )}
 
             {/* ZONE ÉDITABLE ADMIN */}
             {canUpload ? (
@@ -228,12 +234,13 @@ export default function FicheDetail({ inter, onClose, canUpload = false, onSave,
                   <option value="">— Aucun —</option>
                   {sts.map(s => <option key={s.id} value={s.id}>{s.nom}</option>)}
                 </select>
-                <label>Matériel</label>
+                <label>Matériel AVISS</label>
                 <select value={edit.materiel_statut}
                   onChange={e => setEdit(s => ({ ...s, materiel_statut: e.target.value }))}>
                   <option value="">— À choisir —</option>
                   <option value="a_envoyer">À livrer sur site</option>
                   <option value="dispo_magasin">Dispo magasin</option>
+                  <option value="pas_de_materiel">Pas de matériel</option>
                 </select>
                 <label>MO vendue (€) — privé, invisible au sous-traitant</label>
                 <input type="number" value={edit.mo_vendue} placeholder="Saisir pour mettre à jour"

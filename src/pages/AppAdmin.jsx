@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useInterventions } from '../hooks/useInterventions'
 import FicheDetail from '../components/FicheDetail'
+import HistTable from '../components/HistTable'
 import NouveauChantier from '../components/NouveauChantier'
 import Budget from '../components/Budget'
 import GestionST from './GestionST'
@@ -20,6 +21,7 @@ export default function AppAdmin({ profile, signOut }) {
   const [busyId, setBusyId] = useState(null)
   const [tri, setTri] = useState({ cle: null, asc: true })
   const [q, setQ] = useState('')  // recherche texte
+  const [histView, setHistView] = useState('cards')  // vue historique : cards | table
 
   const { active, historique, stats, nbNew } = useMemo(() => {
     // nouvelles dates en tête, puis sans date, puis chronologique
@@ -149,8 +151,21 @@ export default function AppAdmin({ profile, signOut }) {
           <input type="search" value={q} placeholder="🔎 Rechercher (site, TRX, ville…)"
             onChange={e => setQ(e.target.value)}
             style={{ width: '100%', border: '1.5px solid var(--line)', borderRadius: 12, padding: '11px 13px', fontSize: 15, marginBottom: 12, fontFamily: 'inherit', background: '#fff' }} />
+          <div className="toolbar">
+            <span className="lbl">{histAffiche.length} terminé{histAffiche.length > 1 ? 's' : ''}</span>
+            <div className="seg">
+              <button className={histView === 'cards' ? 'on' : ''} onClick={() => setHistView('cards')}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="7" rx="1"/><rect x="3" y="14" width="18" height="7" rx="1"/></svg>Cartes
+              </button>
+              <button className={histView === 'table' ? 'on' : ''} onClick={() => setHistView('table')}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 5h18M3 12h18M3 19h18"/></svg>Tableau
+              </button>
+            </div>
+          </div>
           {histAffiche.length === 0
             ? <div className="empty">Aucune intervention terminée.</div>
+            : histView === 'table'
+            ? <HistTable list={histAffiche} onOpen={setDetail} admin={true} />
             : histAffiche.map(i => {
               const ps = [...(i.passages || [])].sort((a, b) => a.num_passage - b.num_passage)
               return (
@@ -278,6 +293,7 @@ function RowCard({ i, isNew, busyId, onOpen, onValider, onEnvoyerClient }) {
         <span style={{ fontWeight: 700, fontSize: 13.5 }}>📅 {frDate(i.date_inter)}</span>
         <span style={{ fontWeight: 800, color: 'var(--blue)', fontSize: 13.5 }}>{eur(i.budget)}</span>
         <span className={'mtag' + (i.materiel_statut === 'a_envoyer' ? ' warn' : '')}>{MATERIEL_LABEL[i.materiel_statut]}</span>
+        {i.materiel && <span className="mtag">À prévoir ({i.sous_traitants?.nom || '—'}) : {i.materiel}</span>}
       </div>
       {i.statut === 'en_attente' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

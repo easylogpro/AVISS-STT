@@ -58,7 +58,7 @@ export default function Budget() {
 
       {/* Synthèse année */}
       <div className="bcard">
-        <h4>Synthèse {ANNEE}</h4>
+        <h4 style={{ border: '1.5px solid var(--blue)', color: 'var(--blue)', borderRadius: 8, padding: '5px 10px', display: 'inline-block', marginBottom: 12 }}>Synthèse {ANNEE}</h4>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
           <span style={{ color: 'var(--ink2)', fontWeight: 600 }}>Coût ST total</span>
           <span style={{ fontWeight: 800, color: 'var(--blue)' }}>{eur(calc.coutTotal)}</span>
@@ -77,7 +77,7 @@ export default function Budget() {
 
       {/* Ratio par sous-traitant */}
       <div className="bcard">
-        <h4>Par sous-traitant (année {ANNEE})</h4>
+        <h4 style={{ border: '1.5px solid var(--blue)', color: 'var(--blue)', borderRadius: 8, padding: '5px 10px', display: 'inline-block', marginBottom: 12 }}>Par sous-traitant (année {ANNEE})</h4>
         {calc.listeST.length === 0 && <div className="empty">Aucune donnée.</div>}
         {calc.listeST.map(s => (
           <div key={s.nom} style={{ padding: '10px 0', borderBottom: '1px solid var(--line)' }}>
@@ -94,15 +94,11 @@ export default function Budget() {
             </div>
           </div>
         ))}
-        <p style={{ fontSize: 11.5, color: 'var(--ink2)', marginTop: 10 }}>
-          Ratio = coût sous-traitant ÷ main d'œuvre vendue. Plus c'est bas, mieux c'est.
-          Le nombre après le tiret est la correspondance : ex. « 50 % - 2 » = la MO vendue couvre 2 fois le coût.
-        </p>
       </div>
 
       {/* Coût par mois */}
       <div className="bcard">
-        <h4>Coût ST par mois ({ANNEE})</h4>
+        <h4 style={{ border: '1.5px solid var(--blue)', color: 'var(--blue)', borderRadius: 8, padding: '5px 10px', display: 'inline-block', marginBottom: 12 }}>Coût ST par mois ({ANNEE})</h4>
         {calc.listeMois.length === 0 && <div className="empty">Aucune date posée cette année.</div>}
         {calc.listeMois.map(([m, v]) => (
           <div className="barrow" key={m}>

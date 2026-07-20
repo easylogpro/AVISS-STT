@@ -17,7 +17,8 @@ export const MATERIEL_LABEL = {
   '': 'Non défini',
   a_envoyer: 'À livrer sur site',
   envoye_sur_site: 'Matériel sur site',
-  dispo_magasin: 'Dispo magasin'
+  dispo_magasin: 'Dispo magasin',
+  pas_de_materiel: 'Pas de matériel'
 }
 
 // Ordre de tri par état : sans date d'abord, puis à valider, puis envoyé
