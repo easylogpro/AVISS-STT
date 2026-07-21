@@ -5,6 +5,7 @@ import HistTable from '../components/HistTable'
 import NouveauChantier from '../components/NouveauChantier'
 import Budget from '../components/Budget'
 import GestionST from './GestionST'
+import GestionEspaces from '../components/GestionEspaces'
 import {
   STATUT_LABEL, STATUT_LABEL_COURT, MATERIEL_LABEL, eur, frDate, refChantier,
   isHistorique, triParDate, triColonne, matchChantier, estNouveauPassageAdmin
@@ -12,7 +13,7 @@ import {
 
 const todayLabel = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
 
-export default function AppAdmin({ profile, signOut }) {
+export default function AppAdmin({ profile, signOut, isSuper = false }) {
   const { items, loading, error, valider, envoyerClient, creer, creerPassage, modifierPassage, updateChamps, supprimerChantier } = useInterventions()
   const [tab, setTab] = useState('chantiers')  // chantiers | nouveau | budget | historique | profil
   const [view, setView] = useState('cards')
@@ -204,12 +205,13 @@ export default function AppAdmin({ profile, signOut }) {
           <div className="page-h">Profil &amp; réglages</div>
           <div className="ch">
             <div className="ttl">{nom}</div>
-            <p style={{ color: 'var(--ink2)', marginTop: 6, fontSize: 13 }}>Administrateur AVISS</p>
+            <p style={{ color: 'var(--ink2)', marginTop: 6, fontSize: 13 }}>{isSuper ? 'Super-administrateur AVISS' : 'Administrateur AVISS'}</p>
           </div>
           <button className="btn ghost full" style={{ marginTop: 4 }} onClick={() => setTab('sous_traitants')}>
             👷 Gérer les sous-traitants
           </button>
           <button className="btn ghost full" onClick={signOut}>Se déconnecter</button>
+          {isSuper && <GestionEspaces />}
         </div>
       )}
 

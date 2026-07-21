@@ -25,7 +25,8 @@ export default function App() {
     )
   }
 
-  return profile.role === 'admin'
-    ? <AppAdmin profile={profile} signOut={signOut} />
+  const isAdminLevel = profile.role === 'admin' || profile.role === 'super_admin'
+  return isAdminLevel
+    ? <AppAdmin profile={profile} signOut={signOut} isSuper={profile.role === 'super_admin'} />
     : <AppST profile={profile} signOut={signOut} />
 }

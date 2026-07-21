@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
 
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE)
     const { data: prof } = await admin.from('profiles').select('role').eq('id', user.id).single()
-    if (prof?.role !== 'admin') return json({ error: 'Action réservée à l\'administrateur.' }, 403)
+    if (!['admin','super_admin'].includes(prof?.role)) return json({ error: 'Action réservée à l\'administrateur.' }, 403)
 
     // 2. Paramètres
     const { sous_traitant_id, password } = await req.json()
