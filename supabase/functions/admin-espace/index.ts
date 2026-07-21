@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
     const { data: prof } = await admin.from('profiles').select('role').eq('id', user.id).single()
     if (prof?.role !== 'super_admin') return json({ error: 'Action réservée au super-administrateur.' }, 403)
 
-    const { action, admin_id, password } = await req.json()
+    const { action, admin_id, password, nom, email } = await req.json()
     if (!action || !admin_id) return json({ error: 'action et admin_id requis.' }, 400)
 
     // sécurité : la cible doit bien être un admin-client (pas toi, pas un ST)
@@ -74,6 +74,24 @@ Deno.serve(async (req) => {
         try { await sendEmail(email, 'Votre nouveau code AVISS STT', html) } catch (_) { /* mail non bloquant */ }
       }
       return json({ ok: true, message: `Code renvoyé à ${cible.nom}.` })
+    }
+
+    if (action === 'modifier') {
+      const nouveauNom = (nom ?? '').toString().trim()
+      const nouvelEmail = (email ?? '').toString().trim()
+      if (!nouveauNom && !nouvelEmail) return json({ error: 'Rien à modifier.' }, 400)
+      if (nouveauNom) {
+        const { error: pErr } = await admin.from('profiles').update({ nom: nouveauNom }).eq('id', admin_id)
+        if (pErr) return json({ error: 'Nom non modifié : ' + pErr.message }, 400)
+      }
+      if (nouvelEmail) {
+        const { error: eErr } = await admin.auth.admin.updateUserById(admin_id, { email: nouvelEmail, email_confirm: true })
+        if (eErr) {
+          const msg = eErr.message?.includes('already') ? 'Cet email est déjà utilisé.' : eErr.message
+          return json({ error: 'Email non modifié : ' + msg }, 400)
+        }
+      }
+      return json({ ok: true, message: 'Espace mis à jour.' })
     }
 
     if (action === 'supprimer') {

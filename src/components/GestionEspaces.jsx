@@ -4,7 +4,7 @@ import { useEspaces } from '../hooks/useEspaces'
 const dateCourt = (iso) => { try { return new Date(iso).toLocaleDateString('fr-FR') } catch { return '' } }
 
 export default function GestionEspaces() {
-  const { list, loading, creerEspace, renvoyerCode, supprimerEspace } = useEspaces()
+  const { list, loading, creerEspace, renvoyerCode, modifierEspace, supprimerEspace } = useEspaces()
   const [open, setOpen] = useState(false)
   const [f, setF] = useState({ nom: '', email: '', password: '' })
   const [busy, setBusy] = useState(false)
@@ -12,6 +12,8 @@ export default function GestionEspaces() {
   const [codeFor, setCodeFor] = useState(null)
   const [codeVal, setCodeVal] = useState('')
   const [rowBusy, setRowBusy] = useState(null)
+  const [editFor, setEditFor] = useState(null)
+  const [editVals, setEditVals] = useState({ nom: '', email: '' })
 
   async function creer() {
     setMsg(null)
@@ -33,6 +35,22 @@ export default function GestionEspaces() {
     setRowBusy(null)
     if (error) setMsg({ type: 'err', text: error })
     else { setMsg({ type: 'ok', text: 'Nouveau code envoyé par mail.' }); setCodeFor(null); setCodeVal('') }
+  }
+
+  function ouvrirEdition(a) {
+    setEditFor(editFor === a.id ? null : a.id)
+    setEditVals({ nom: a.nom || '', email: '' })
+    setCodeFor(null); setMsg(null)
+  }
+
+  async function enregistrerEdition(id) {
+    setMsg(null)
+    if (!editVals.nom.trim() && !editVals.email.trim()) { setMsg({ type: 'err', text: 'Renseigne au moins le nom ou le nouvel email.' }); return }
+    setRowBusy(id)
+    const { error } = await modifierEspace(id, { nom: editVals.nom.trim(), email: editVals.email.trim() })
+    setRowBusy(null)
+    if (error) setMsg({ type: 'err', text: error })
+    else { setMsg({ type: 'ok', text: 'Espace mis à jour.' }); setEditFor(null) }
   }
 
   async function supprimer(id, nom) {
@@ -83,8 +101,23 @@ export default function GestionEspaces() {
               <div style={{ fontSize: 12, color: 'var(--ink2)' }}>Espace créé le {dateCourt(a.created_at)}</div>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-            <button className="btn ghost" style={{ flex: 1, fontSize: 13 }} onClick={() => { setCodeFor(codeFor === a.id ? null : a.id); setCodeVal(''); setMsg(null) }}>
+          <button className="btn ghost full" style={{ marginTop: 10, fontSize: 13 }} onClick={() => ouvrirEdition(a)}>
+            {editFor === a.id ? 'Fermer' : '✏️ Modifier (nom / email)'}
+          </button>
+          {editFor === a.id && (
+            <div className="form" style={{ marginTop: 8, background: '#eef4fb', borderRadius: 11, padding: 12 }}>
+              <label>Nom</label>
+              <input value={editVals.nom} onChange={e => setEditVals(v => ({ ...v, nom: e.target.value }))} />
+              <label>Nouvel email (laisser vide pour ne pas changer)</label>
+              <input type="email" autoCapitalize="none" value={editVals.email} placeholder="nouvel@email.fr"
+                onChange={e => setEditVals(v => ({ ...v, email: e.target.value }))} />
+              <button className="btn primary full" style={{ marginTop: 10 }} onClick={() => enregistrerEdition(a.id)} disabled={rowBusy === a.id}>
+                {rowBusy === a.id ? 'Enregistrement…' : 'Enregistrer'}
+              </button>
+            </div>
+          )}
+          <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+            <button className="btn ghost" style={{ flex: 1, fontSize: 13 }} onClick={() => { setCodeFor(codeFor === a.id ? null : a.id); setCodeVal(''); setEditFor(null); setMsg(null) }}>
               {codeFor === a.id ? 'Fermer' : '🔑 Renvoyer le code'}
             </button>
             <button className="btn" style={{ flex: 1, fontSize: 13, background: '#fdecea', color: 'var(--red)' }}

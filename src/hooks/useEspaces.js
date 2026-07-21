@@ -37,11 +37,17 @@ export function useEspaces() {
   const renvoyerCode = useCallback(async (admin_id, password) =>
     invoke('admin-espace', { action: 'renvoyer_code', admin_id, password }), [])
 
+  const modifierEspace = useCallback(async (admin_id, { nom, email }) => {
+    const r = await invoke('admin-espace', { action: 'modifier', admin_id, nom, email })
+    if (!r.error) await fetchAll()
+    return r
+  }, [fetchAll])
+
   const supprimerEspace = useCallback(async (admin_id) => {
     const r = await invoke('admin-espace', { action: 'supprimer', admin_id })
     if (!r.error) await fetchAll()
     return r
   }, [fetchAll])
 
-  return { list, loading, refetch: fetchAll, creerEspace, renvoyerCode, supprimerEspace }
+  return { list, loading, refetch: fetchAll, creerEspace, renvoyerCode, modifierEspace, supprimerEspace }
 }
